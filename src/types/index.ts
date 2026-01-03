@@ -15,6 +15,8 @@ export interface IUser extends Document {
   role: 'user' | 'moderator' | 'admin';
   isActive: boolean;
   createdBy: IAdmin['_id'];
+  createdAt: Date;
+  updatedAt: Date;
   comparePassword(password: string): Promise<boolean>;
 }
 

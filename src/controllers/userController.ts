@@ -40,7 +40,7 @@ export const createUser = async (req: AuthRequest, res: Response): Promise<void>
       email: user.email,
       role: user.role,
       isActive: user.isActive,
-      createdAt: user.createdAt || new Date()
+      createdAt: user.createdAt
     };
 
     res.status(201).json({
