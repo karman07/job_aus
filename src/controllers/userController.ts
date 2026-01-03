@@ -4,7 +4,7 @@ import User from '../models/User';
 import Admin from '../models/Admin';
 import { AuthRequest, CreateUserDto, UpdateUserDto } from '../types';
 
-export const createUser = async (req: AuthRequest<{}, {}, CreateUserDto>, res: Response): Promise<void> => {
+export const createUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -40,7 +40,7 @@ export const createUser = async (req: AuthRequest<{}, {}, CreateUserDto>, res: R
       email: user.email,
       role: user.role,
       isActive: user.isActive,
-      createdAt: user.createdAt
+      createdAt: user.createdAt || new Date()
     };
 
     res.status(201).json({
@@ -132,7 +132,7 @@ export const getUserById = async (req: AuthRequest, res: Response): Promise<void
   }
 };
 
-export const updateUser = async (req: AuthRequest<{ id: string }, {}, UpdateUserDto>, res: Response): Promise<void> => {
+export const updateUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

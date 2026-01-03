@@ -3,7 +3,7 @@ import { validationResult } from 'express-validator';
 import Job from '../models/Job';
 import { AuthRequest, CreateJobDto, UpdateJobDto } from '../types';
 
-export const createJob = async (req: AuthRequest<{}, {}, CreateJobDto>, res: Response): Promise<void> => {
+export const createJob = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -89,7 +89,7 @@ export const getJobById = async (req: AuthRequest, res: Response): Promise<void>
   }
 };
 
-export const updateJob = async (req: AuthRequest<{ id: string }, {}, UpdateJobDto>, res: Response): Promise<void> => {
+export const updateJob = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

@@ -4,7 +4,7 @@ import Application from '../models/Application';
 import Job from '../models/Job';
 import { AuthRequest, CreateApplicationDto, UpdateApplicationDto } from '../types';
 
-export const createApplication = async (req: AuthRequest<{}, {}, CreateApplicationDto>, res: Response): Promise<void> => {
+export const createApplication = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -121,7 +121,7 @@ export const getApplicationById = async (req: AuthRequest, res: Response): Promi
   }
 };
 
-export const updateApplication = async (req: AuthRequest<{ id: string }, {}, UpdateApplicationDto>, res: Response): Promise<void> => {
+export const updateApplication = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
