@@ -1,28 +1,29 @@
-# Job Backend API
+# CrossNations Backend API
 
-A comprehensive TypeScript Express.js backend for job posting management with admin authentication, built with MongoDB and comprehensive validation.
+A comprehensive TypeScript Express.js backend for the CrossNations job portal platform with role-based authentication, built with MongoDB and comprehensive validation.
 
 ## Features
 
-- **Admin Authentication**: Secure JWT-based login/signup for admins only
-- **Job Management**: Full CRUD operations for job postings
-- **Application Management**: Complete application handling with file uploads
-- **File Upload**: Resume upload using Multer with validation
-- **Type Safety**: Full TypeScript implementation with strict typing
-- **Validation**: Comprehensive input validation using express-validator
-- **Security**: Helmet, CORS, rate limiting, and secure file handling
-- **Database**: MongoDB with Mongoose ODM and proper indexing
+- **Role-Based Authentication**: Secure JWT-based authentication for candidates, employers, and admins
+- **Job Management**: Full CRUD operations for job postings with Australian-specific categories
+- **Application Management**: Complete application handling with file uploads and status tracking
+- **Candidate Profiles**: Comprehensive candidate profile management with skills and preferences
+- **Company Profiles**: Employer company profile management with logo uploads
+- **Advanced Search**: Job search with filtering, sorting, and AI-powered matching
+- **Analytics Dashboard**: Comprehensive analytics for jobs, applications, and user activity
+- **File Upload**: Resume and logo upload using Multer with validation
+- **Notifications**: Real-time notification system for job matches and application updates
+- **Contact System**: Contact inquiry management for support and sales
 
 ## Tech Stack
 
 - **Runtime**: Node.js with TypeScript
 - **Framework**: Express.js
-- **Database**: MongoDB with Mongoose
+- **Database**: MongoDB with Mongoose ODM
 - **Authentication**: JWT (JSON Web Tokens)
 - **File Upload**: Multer
 - **Validation**: express-validator
 - **Security**: Helmet, CORS, bcryptjs
-- **Development**: ts-node-dev, nodemon
 
 ## Installation
 
@@ -34,8 +35,8 @@ npm install
 
 3. Create `.env` file:
 ```env
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/job_backend
+PORT=3001
+MONGODB_URI=mongodb://localhost:27017/crossnations_backend
 JWT_SECRET=your_super_secret_jwt_key_here
 NODE_ENV=development
 FRONTEND_URL=http://localhost:3000
@@ -55,137 +56,177 @@ npm start
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/signup` - Admin signup
-- `POST /api/auth/login` - Admin login
+- `POST /api/auth/register` - User registration (candidate/employer)
+- `POST /api/auth/login` - User login
+- `POST /api/auth/refresh` - Refresh access token
+- `POST /api/auth/logout` - User logout
+- `POST /api/auth/forgot-password` - Request password reset
+- `POST /api/auth/reset-password` - Reset password with token
+- `GET /api/auth/verify-email/:token` - Verify email address
 
-### Jobs (Protected Routes)
-- `POST /api/jobs` - Create job
+### User Profile Management
+- `GET /api/users/profile` - Get current user profile
+- `PUT /api/users/profile` - Update user profile
+- `DELETE /api/users/account` - Delete user account
+
+### Jobs (Public & Protected Routes)
 - `GET /api/jobs` - Get all jobs (with pagination & filters)
 - `GET /api/jobs/:id` - Get job by ID
-- `PUT /api/jobs/:id` - Update job
-- `DELETE /api/jobs/:id` - Delete job
+- `POST /api/jobs` - Create job (Employer only)
+- `PUT /api/jobs/:id` - Update job (Employer only)
+- `DELETE /api/jobs/:id` - Delete job (Employer only)
+- `POST /api/jobs/:id/apply` - Apply for job (Candidate only)
+- `GET /api/jobs/:id/applications` - Get job applications (Employer only)
+- `PUT /api/jobs/:jobId/applications/:applicationId` - Update application status (Employer only)
 
-### Applications
-- `POST /api/applications` - Submit application (with resume upload)
-- `GET /api/applications` - Get all applications (Protected)
-- `GET /api/applications/:id` - Get application by ID (Protected)
-- `PUT /api/applications/:id` - Update application status (Protected)
-- `DELETE /api/applications/:id` - Delete application (Protected)
-- `GET /api/applications/job/:jobId` - Get applications for specific job (Protected)
+### Candidate Profile & Applications
+- `GET /api/candidates/profile` - Get candidate profile
+- `PUT /api/candidates/profile` - Update candidate profile
+- `POST /api/candidates/upload-resume` - Upload resume
+- `GET /api/candidates/applications` - Get candidate applications
+- `PUT /api/candidates/applications/:id` - Update application
+- `GET /api/candidates/saved-jobs` - Get saved jobs
+- `POST /api/candidates/saved-jobs` - Save job
+- `DELETE /api/candidates/saved-jobs/:jobId` - Remove saved job
 
-## Request Examples
+### Company Management
+- `GET /api/companies/:id` - Get company details (Public)
+- `PUT /api/companies/profile` - Update company profile (Employer only)
+- `POST /api/companies/upload-logo` - Upload company logo (Employer only)
+- `GET /api/companies/profile/jobs` - Get company jobs (Employer only)
 
-### Admin Signup
-```json
-POST /api/auth/signup
-{
-  "username": "admin",
-  "email": "admin@example.com",
-  "password": "Admin123"
-}
-```
+### Search & Recommendations
+- `GET /api/search/jobs` - Advanced job search with AI matching
+- `GET /api/search/recommendations/jobs` - Get job recommendations (Candidate only)
+- `GET /api/search/recommendations/candidates` - Get candidate recommendations (Employer only)
 
-### Create Job
-```json
-POST /api/jobs
-Authorization: Bearer <token>
-{
-  "title": "Senior Developer",
-  "description": "We are looking for a senior developer...",
-  "company": "Tech Corp",
-  "location": "New York, NY",
-  "salary": {
-    "min": 80000,
-    "max": 120000,
-    "currency": "USD"
-  },
-  "type": "full-time",
-  "requirements": ["5+ years experience", "React", "Node.js"],
-  "benefits": ["Health insurance", "401k"],
-  "applicationDeadline": "2024-12-31T23:59:59.000Z"
-}
-```
+### Analytics & Statistics
+- `GET /api/analytics/dashboard` - Get dashboard analytics
+- `GET /api/analytics/jobs/:id` - Get job analytics (Employer only)
 
-### Submit Application
-```json
-POST /api/applications
-Content-Type: multipart/form-data
+### Data & Reference
+- `GET /api/data/industries` - Get available industries
+- `GET /api/data/locations` - Get available locations (Australian states/cities)
+- `GET /api/data/skills` - Get popular skills by industry
 
-jobId: "job_id_here"
-applicantName: "John Doe"
-email: "john@example.com"
-phone: "+1234567890"
-experience: 5
-skills: ["JavaScript", "React", "Node.js"]
-coverLetter: "I am interested in this position..."
-resume: [file upload]
-```
+### Notifications & Contact
+- `GET /api/notifications` - Get user notifications
+- `PUT /api/notifications/:id/read` - Mark notification as read
+- `PUT /api/notifications/read-all` - Mark all notifications as read
+- `POST /api/contact` - Submit contact inquiry
+- `GET /api/contact/inquiries` - Get contact inquiries (Admin only)
 
 ## Database Schema
 
-### Admin
-- username (unique, 3-30 chars)
-- email (unique, validated)
-- password (hashed, min 6 chars)
+### User Roles
+- **Candidate**: Job seekers with profiles and application history
+- **Employer**: Company representatives who post jobs and manage applications
+- **Admin**: Platform administrators with full access
 
-### Job
-- title, description, company, location
-- salary (min, max, currency)
-- type (full-time, part-time, contract, internship)
-- requirements, benefits (arrays)
-- status (active, inactive, closed)
-- postedBy (Admin reference)
-- applicationDeadline
+### Australian Job Categories
+- **Industries**: Health, Hospitality, Childcare, Construction, Mining, Technology
+- **States**: NSW, VIC, QLD, WA, SA, TAS, ACT, NT
+- **Job Types**: Full Time, Part Time, Contract, FIFO 2:1, FIFO 8:6
+- **Work Types**: On-Site, Remote, Hybrid
 
-### Application
-- jobId (Job reference)
-- applicantName, email, phone
-- resume (file path)
-- coverLetter, experience, skills
-- status (pending, reviewed, shortlisted, rejected, hired)
-- reviewedBy (Admin reference)
-- appliedAt, reviewedAt, notes
+### Key Models
+- **User**: Authentication and basic profile information
+- **CandidateProfile**: Detailed candidate information, skills, preferences
+- **Company**: Employer company information and branding
+- **Job**: Job postings with Australian-specific categories
+- **JobApplication**: Application tracking with status management
+- **SavedJob**: Candidate job bookmarking
+- **Notification**: Real-time user notifications
+- **ContactInquiry**: Support and sales inquiries
 
 ## Security Features
 
+- JWT token-based authentication with refresh tokens
+- Role-based access control (RBAC)
 - Password hashing with bcrypt
-- JWT token authentication
 - Input validation and sanitization
-- File upload restrictions (PDF, DOC, DOCX only)
-- Rate limiting (100 requests per 15 minutes)
-- CORS configuration
+- File upload restrictions and validation
+- CORS configuration for frontend integration
 - Helmet security headers
 - MongoDB injection protection
 
-## File Upload
+## File Upload Support
 
-- Supported formats: PDF, DOC, DOCX
-- Maximum file size: 5MB
-- Files stored in `/uploads` directory
-- Unique filename generation to prevent conflicts
+### Supported File Types
+- **Resumes**: PDF, DOC, DOCX (max 10MB)
+- **Company Logos**: JPG, PNG, SVG (max 10MB)
+- **Portfolio Files**: PDF, JPG, PNG (max 10MB)
 
-## Error Handling
+### File Storage
+Files are stored in the `/uploads` directory with unique filenames to prevent conflicts.
 
-All endpoints return consistent error responses:
-```json
-{
-  "success": false,
-  "message": "Error description",
-  "errors": ["Detailed validation errors"]
-}
-```
+## Australian Job Market Features
+
+### Industry-Specific Categories
+- Healthcare & Medical
+- Hospitality & Tourism
+- Childcare & Education
+- Construction & Trades
+- Mining & Resources (including FIFO roles)
+- Technology & IT
+
+### Location Support
+- All Australian states and territories
+- Major cities and regional areas
+- FIFO (Fly-In-Fly-Out) job support
+
+### Visa Status Tracking
+- Australian Citizen
+- Permanent Resident
+- Visa Holder
+- Needs Sponsorship
 
 ## Development
 
 - `npm run dev` - Start development server with hot reload
 - `npm run build` - Build TypeScript to JavaScript
-- `npm run type-check` - Check TypeScript types without compilation
+- `npm run type-check` - Check TypeScript types
 - `npm start` - Start production server
 
 ## Environment Variables
 
-- `PORT` - Server port (default: 5000)
+- `PORT` - Server port (default: 3001)
 - `MONGODB_URI` - MongoDB connection string
 - `JWT_SECRET` - Secret key for JWT tokens
 - `NODE_ENV` - Environment (development/production)
 - `FRONTEND_URL` - Frontend URL for CORS
+
+## API Response Format
+
+All API responses follow a consistent format:
+
+```json
+{
+  "success": boolean,
+  "message": "Response message",
+  "data": {
+    // Response data
+  },
+  "errors": ["Validation errors"] // Only on error responses
+}
+```
+
+## Error Handling
+
+The API includes comprehensive error handling with appropriate HTTP status codes:
+- `400` - Bad Request (validation errors)
+- `401` - Unauthorized (authentication required)
+- `403` - Forbidden (insufficient permissions)
+- `404` - Not Found
+- `500` - Internal Server Error
+
+## Future Enhancements
+
+- AI-powered job matching algorithm
+- Real-time chat between employers and candidates
+- Video interview scheduling
+- Advanced analytics and reporting
+- Mobile app API support
+- Integration with external job boards
+- Automated email notifications
+- Payment processing for premium features

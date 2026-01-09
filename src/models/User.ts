@@ -1,56 +1,52 @@
-import mongoose, { Schema } from 'mongoose';
-import bcrypt from 'bcryptjs';
-import { IUser } from '../types';
+import mongoose, { Document, Schema } from 'mongoose';
+
+export interface IUser extends Document {
+  email: string;
+  firstName: string;
+  lastName: string;
+  password?: string; // Only for admin users
+  phone?: string;
+  role: 'candidate' | 'employer' | 'admin';
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const userSchema = new Schema<IUser>({
-  username: {
-    type: String,
-    required: [true, 'Username is required'],
-    unique: true,
-    trim: true,
-    minlength: [3, 'Username must be at least 3 characters'],
-    maxlength: [30, 'Username cannot exceed 30 characters']
-  },
   email: {
     type: String,
-    required: [true, 'Email is required'],
+    required: true,
     unique: true,
     lowercase: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+    trim: true
+  },
+  firstName: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  lastName: {
+    type: String,
+    required: true,
+    trim: true
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters']
+    required: function() {
+      return this.role === 'admin';
+    }
+  },
+  phone: {
+    type: String,
+    trim: true
   },
   role: {
     type: String,
-    enum: {
-      values: ['user', 'moderator', 'admin'],
-      message: 'Role must be user, moderator, or admin'
-    },
-    default: 'user'
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  createdBy: {
-    type: Schema.Types.ObjectId,
-    ref: 'Admin'
+    enum: ['candidate', 'employer', 'admin'],
+    required: true,
+    default: 'candidate'
   }
 }, {
   timestamps: true
 });
-
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
-});
-
-userSchema.methods.comparePassword = async function(password: string): Promise<boolean> {
-  return await bcrypt.compare(password, this.password);
-};
 
 export default mongoose.model<IUser>('User', userSchema);

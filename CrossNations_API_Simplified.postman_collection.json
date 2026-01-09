@@ -1,0 +1,496 @@
+{
+  "info": {
+    "name": "CrossNations API - Simplified",
+    "description": "CrossNations job portal API without authentication",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001/api"
+    },
+    {
+      "key": "userId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"role\": \"candidate\",\n  \"phone\": \"+61400000000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('userId', response.data.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update User Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-id",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John Updated\",\n  \"lastName\": \"Doe Updated\",\n  \"phone\": \"+61400000001\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "Get All Jobs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/jobs?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Job by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/jobs/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs", "{{jobId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Job (Employer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-id",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Software Developer\",\n  \"description\": \"We are looking for a skilled software developer\",\n  \"requirements\": \"3+ years experience in JavaScript\",\n  \"location\": \"Sydney\",\n  \"state\": \"NSW\",\n  \"type\": \"Full Time\",\n  \"jobTypeCategory\": \"Permanent\",\n  \"workType\": \"Hybrid\",\n  \"industry\": \"technology\",\n  \"salaryDisplay\": \"$80k - $100k\",\n  \"tags\": [\"javascript\", \"react\", \"node.js\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jobs",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs"]
+            }
+          }
+        },
+        {
+          "name": "Apply for Job (Candidate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-id",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"coverLetter\": \"I am very interested in this position...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jobs/{{jobId}}/apply",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs", "{{jobId}}", "apply"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Candidates",
+      "item": [
+        {
+          "name": "Get Candidate Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/candidates/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["candidates", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Candidate Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-id",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentRole\": \"Software Developer\",\n  \"currentCompany\": \"Tech Corp\",\n  \"yearsExperience\": \"3-5\",\n  \"skills\": \"JavaScript, React, Node.js\",\n  \"preferredIndustries\": [\"technology\"],\n  \"visaStatus\": \"citizen\",\n  \"isOpenToWork\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/candidates/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["candidates", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Get Candidate Applications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/candidates/applications",
+              "host": ["{{baseUrl}}"],
+              "path": ["candidates", "applications"]
+            }
+          }
+        },
+        {
+          "name": "Save Job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-id",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobId\": \"{{jobId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/candidates/saved-jobs",
+              "host": ["{{baseUrl}}"],
+              "path": ["candidates", "saved-jobs"]
+            }
+          }
+        },
+        {
+          "name": "Get Saved Jobs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/candidates/saved-jobs",
+              "host": ["{{baseUrl}}"],
+              "path": ["candidates", "saved-jobs"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Companies",
+      "item": [
+        {
+          "name": "Get Company by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Company Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-id",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tech Solutions Pty Ltd\",\n  \"description\": \"Leading technology company in Australia\",\n  \"website\": \"https://techsolutions.com.au\",\n  \"size\": \"50-100 employees\",\n  \"industry\": [\"technology\"],\n  \"location\": \"Sydney, NSW\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/companies/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Search Jobs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/search/jobs?q=developer&industry=technology&location=Sydney",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "jobs"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "developer"
+                },
+                {
+                  "key": "industry",
+                  "value": "technology"
+                },
+                {
+                  "key": "location",
+                  "value": "Sydney"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Job Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/search/recommendations/jobs",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "recommendations", "jobs"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Data",
+      "item": [
+        {
+          "name": "Get Industries",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/data/industries",
+              "host": ["{{baseUrl}}"],
+              "path": ["data", "industries"]
+            }
+          }
+        },
+        {
+          "name": "Get Locations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/data/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["data", "locations"]
+            }
+          }
+        },
+        {
+          "name": "Get Skills",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/data/skills?industry=technology",
+              "host": ["{{baseUrl}}"],
+              "path": ["data", "skills"],
+              "query": [
+                {
+                  "key": "industry",
+                  "value": "technology"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Get Dashboard Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-id",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "dashboard"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contact",
+      "item": [
+        {
+          "name": "Submit Contact Inquiry",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"subject\": \"General Inquiry\",\n  \"message\": \"I have a question about your platform\",\n  \"type\": \"general\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/contact",
+              "host": ["{{baseUrl}}"],
+              "path": ["contact"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3001/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,32 +1,47 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import Admin from '../models/Admin';
+import User from '../models/User';
 import { AuthRequest } from '../types';
 
-export const authGuard = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const authenticateToken = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    
     if (!token) {
-      res.status(401).json({ message: 'Access denied. No token provided.' });
+      res.status(401).json({ success: false, message: 'Access token required' });
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { adminId: string };
-    const admin = await Admin.findById(decoded.adminId).select('-password');
-
-    if (!admin) {
-      res.status(401).json({ message: 'Invalid token. Admin not found.' });
+    // Verify JWT token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as any;
+    
+    // Find user by ID from token
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      res.status(401).json({ success: false, message: 'User not found' });
       return;
     }
 
-    req.admin = admin;
+    // Check if user is admin for admin routes
+    if (req.path.includes('/admin') && user.role !== 'admin') {
+      res.status(403).json({ success: false, message: 'Admin access required' });
+      return;
+    }
+
+    req.user = user;
     next();
   } catch (error) {
-    res.status(401).json({ message: 'Invalid token.' });
+    if (error instanceof jwt.JsonWebTokenError) {
+      res.status(401).json({ success: false, message: 'Invalid token' });
+    } else if (error instanceof jwt.TokenExpiredError) {
+      res.status(401).json({ success: false, message: 'Token expired' });
+    } else {
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
   }
-};
-
-export const generateToken = (adminId: string): string => {
-  return jwt.sign({ adminId }, process.env.JWT_SECRET!, { expiresIn: '7d' });
 };

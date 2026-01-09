@@ -1,0 +1,598 @@
+{
+  "info": {
+    "name": "CrossNations Job Portal API - Final with Auth",
+    "description": "Complete API collection with admin authentication and JWT token support",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001/api",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "candidateId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jobId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "applicationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Admin Authentication",
+      "item": [
+        {
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.success && response.data.token) {",
+                  "        pm.collectionVariables.set('adminToken', response.data.token);",
+                  "        console.log('Admin token saved:', response.data.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@crossnations.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "login"]
+            }
+          }
+        },
+        {
+          "name": "Create Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@crossnations.com\",\n  \"firstName\": \"System\",\n  \"lastName\": \"Administrator\",\n  \"password\": \"admin123\",\n  \"phone\": \"+61234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "create"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔧 Admin Management",
+      "item": [
+        {
+          "name": "Get All Admins",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin"]
+            }
+          }
+        },
+        {
+          "name": "Update Admin",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@crossnations.com\",\n  \"firstName\": \"Updated\",\n  \"lastName\": \"Administrator\",\n  \"password\": \"newpassword123\",\n  \"phone\": \"+61987654321\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/{{adminId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "{{adminId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Admin",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/{{adminId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "{{adminId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Candidate Management",
+      "item": [
+        {
+          "name": "Create Candidate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phone\": \"+61234567890\",\n  \"location\": \"Sydney, NSW\",\n  \"preferredRole\": \"Software Developer\",\n  \"currentRole\": \"Junior Developer\",\n  \"currentCompany\": \"Tech Co\",\n  \"yearsExperience\": \"3-5\",\n  \"skills\": \"JavaScript, React, Node.js\",\n  \"education\": \"Bachelor of Computer Science\",\n  \"preferredIndustries\": [\"technology\"],\n  \"salaryExpectation\": 85000,\n  \"availableFrom\": \"2024-02-01\",\n  \"visaStatus\": \"citizen\",\n  \"portfolioUrl\": \"https://johndoe.dev\",\n  \"linkedinUrl\": \"https://linkedin.com/in/johndoe\",\n  \"isOpenToWork\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/candidates",
+              "host": ["{{baseUrl}}"],
+              "path": ["candidates"]
+            }
+          }
+        },
+        {
+          "name": "Update Candidate",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Smith\",\n  \"email\": \"john.smith@example.com\",\n  \"currentRole\": \"Senior Developer\",\n  \"yearsExperience\": \"5-10\",\n  \"salaryExpectation\": 95000,\n  \"isOpenToWork\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/candidates/{{candidateId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["candidates", "{{candidateId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💼 Job Management",
+      "item": [
+        {
+          "name": "Create Job",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Software Developer",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "We are looking for a skilled developer to join our team",
+                  "type": "text"
+                },
+                {
+                  "key": "requirements",
+                  "value": "3+ years experience in JavaScript, React, Node.js",
+                  "type": "text"
+                },
+                {
+                  "key": "keyResponsibilities",
+                  "value": "Develop and maintain web applications, collaborate with team",
+                  "type": "text"
+                },
+                {
+                  "key": "location",
+                  "value": "Sydney",
+                  "type": "text"
+                },
+                {
+                  "key": "state",
+                  "value": "NSW",
+                  "type": "text"
+                },
+                {
+                  "key": "type",
+                  "value": "Full Time",
+                  "type": "text"
+                },
+                {
+                  "key": "jobTypeCategory",
+                  "value": "Permanent",
+                  "type": "text"
+                },
+                {
+                  "key": "workType",
+                  "value": "On-Site",
+                  "type": "text"
+                },
+                {
+                  "key": "industry",
+                  "value": "technology",
+                  "type": "text"
+                },
+                {
+                  "key": "salaryDisplay",
+                  "value": "$80,000 - $100,000",
+                  "type": "text"
+                },
+                {
+                  "key": "tags",
+                  "value": "[\"JavaScript\", \"React\", \"Node.js\"]",
+                  "type": "text"
+                },
+                {
+                  "key": "company.name",
+                  "value": "Tech Company",
+                  "type": "text"
+                },
+                {
+                  "key": "company.description",
+                  "value": "Leading technology company",
+                  "type": "text"
+                },
+                {
+                  "key": "company.website",
+                  "value": "https://techcompany.com",
+                  "type": "text"
+                },
+                {
+                  "key": "company.size",
+                  "value": "50-100",
+                  "type": "text"
+                },
+                {
+                  "key": "company.founded",
+                  "value": "2015",
+                  "type": "text"
+                },
+                {
+                  "key": "company.industry",
+                  "value": "[\"technology\"]",
+                  "type": "text"
+                },
+                {
+                  "key": "company.location",
+                  "value": "Sydney, NSW",
+                  "type": "text"
+                },
+                {
+                  "key": "company.contact.email",
+                  "value": "hr@techcompany.com",
+                  "type": "text"
+                },
+                {
+                  "key": "company.contact.phone",
+                  "value": "+61234567890",
+                  "type": "text"
+                },
+                {
+                  "key": "logo",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jobs",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs"]
+            }
+          }
+        },
+        {
+          "name": "Get All Jobs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/jobs?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Job by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/jobs/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs", "{{jobId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Job (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Senior Software Developer\",\n  \"description\": \"Updated job description for senior role\",\n  \"requirements\": \"5+ years experience in JavaScript, React, Node.js\",\n  \"keyResponsibilities\": \"Lead development team, mentor junior developers\",\n  \"location\": \"Melbourne\",\n  \"state\": \"VIC\",\n  \"type\": \"Full Time\",\n  \"jobTypeCategory\": \"Permanent\",\n  \"workType\": \"Hybrid\",\n  \"industry\": \"technology\",\n  \"salaryDisplay\": \"$100,000 - $120,000\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jobs/admin/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs", "admin", "{{jobId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Job (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/jobs/admin/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs", "admin", "{{jobId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get All Jobs (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/jobs/admin/all?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["jobs", "admin", "all"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📋 Application Management",
+      "item": [
+        {
+          "name": "Apply for Job",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "candidateId",
+                  "value": "{{candidateId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "jobId",
+                  "value": "{{jobId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "fullName",
+                  "value": "John Doe",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "john.doe@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "phone",
+                  "value": "+61234567890",
+                  "type": "text"
+                },
+                {
+                  "key": "location",
+                  "value": "Sydney, NSW",
+                  "type": "text"
+                },
+                {
+                  "key": "preferredRole",
+                  "value": "Software Developer",
+                  "type": "text"
+                },
+                {
+                  "key": "currentRole",
+                  "value": "Junior Developer",
+                  "type": "text"
+                },
+                {
+                  "key": "currentCompany",
+                  "value": "Tech Co",
+                  "type": "text"
+                },
+                {
+                  "key": "yearsExperience",
+                  "value": "3-5",
+                  "type": "text"
+                },
+                {
+                  "key": "skills",
+                  "value": "JavaScript, React",
+                  "type": "text"
+                },
+                {
+                  "key": "education",
+                  "value": "Bachelor CS",
+                  "type": "text"
+                },
+                {
+                  "key": "resume",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/applications",
+              "host": ["{{baseUrl}}"],
+              "path": ["applications"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 Data & Reference",
+      "item": [
+        {
+          "name": "Get Industries",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/data/industries",
+              "host": ["{{baseUrl}}"],
+              "path": ["data", "industries"]
+            }
+          }
+        },
+        {
+          "name": "Get Locations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/data/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["data", "locations"]
+            }
+          }
+        },
+        {
+          "name": "Get Skills by Industry",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/data/skills?industry=technology",
+              "host": ["{{baseUrl}}"],
+              "path": ["data", "skills"],
+              "query": [
+                {
+                  "key": "industry",
+                  "value": "technology"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏥 Health Check",
+      "item": [
+        {
+          "name": "Server Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3001/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,186 +1,108 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import User from '../models/User';
-import Admin from '../models/Admin';
-import { AuthRequest, CreateUserDto, UpdateUserDto } from '../types';
+import CandidateProfile from '../models/CandidateProfile';
+import { AuthRequest } from '../types';
+import path from 'path';
+import fs from 'fs';
 
-export const createUser = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getUserProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
       return;
     }
 
-    const { username, email, password, role } = req.body;
-
-    const existingUser = await User.findOne({
-      $or: [{ email }, { username }]
-    });
-
-    if (existingUser) {
-      res.status(409).json({ message: 'User with this email or username already exists' });
-      return;
-    }
-
-    const userData = {
-      username,
-      email,
-      password,
-      role,
-      createdBy: req.admin!._id
+    const user = {
+      id: req.user._id,
+      email: req.user.email,
+      firstName: req.user.firstName,
+      lastName: req.user.lastName,
+      phone: req.user.phone,
+      role: req.user.role
     };
 
-    const user = new User(userData);
-    await user.save();
+    let profile = null;
 
-    const userResponse = {
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
-      createdAt: user.createdAt
-    };
-
-    res.status(201).json({
-      message: 'User created successfully',
-      user: userResponse
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: (error as Error).message });
-  }
-};
-
-export const getAllUsers = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const skip = (page - 1) * limit;
-
-    const filter: any = {};
-    if (req.query.role) {
-      filter.role = req.query.role;
+    if (req.user.role === 'candidate') {
+      profile = await CandidateProfile.findOne({ userId: req.user._id });
     }
-    if (req.query.isActive !== undefined) {
-      filter.isActive = req.query.isActive === 'true';
-    }
-
-    // Get users from User collection
-    const users = await User.find(filter)
-      .select('-password')
-      .populate('createdBy', 'username email')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    // Get admins from Admin collection and format them as users
-    const admins = await Admin.find({})
-      .select('-password')
-      .sort({ createdAt: -1 });
-
-    // Format admins to match user structure
-    const formattedAdmins = admins.map((admin: any) => ({
-      _id: admin._id,
-      username: admin.username,
-      email: admin.email,
-      role: 'admin',
-      isActive: true,
-      createdAt: admin.createdAt,
-      updatedAt: admin.updatedAt,
-      createdBy: null
-    }));
-
-    // Combine users and admins
-    const allUsers = [...formattedAdmins, ...users];
-    const total = await User.countDocuments(filter) + admins.length;
 
     res.json({
-      users: allUsers,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
+      success: true,
+      data: {
+        user,
+        profile,
+        company: null
       }
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: (error as Error).message });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
-export const getUserById = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateUserProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+      res.status(400).json({
+        success: false,
+        errors: errors.array().map(err => err.msg)
+      });
       return;
     }
 
-    const user = await User.findById(req.params.id)
-      .select('-password')
-      .populate('createdBy', 'username email');
-    
-    if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
-    }
-
-    res.json({ user });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: (error as Error).message });
-  }
-};
-
-export const updateUser = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ message: 'Validation failed', errors: errors.array() });
-      return;
-    }
-
-    const user = await User.findById(req.params.id);
-    
-    if (!user) {
-      res.status(404).json({ message: 'User not found' });
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
       return;
     }
 
     const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
+      req.user._id,
       req.body,
       { new: true, runValidators: true }
-    ).select('-password').populate('createdBy', 'username email');
+    );
+
+    if (!updatedUser) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+      return;
+    }
 
     res.json({
-      message: 'User updated successfully',
-      user: updatedUser
+      success: true,
+      data: { user: updatedUser }
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: (error as Error).message });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
-export const deleteUser = async (req: AuthRequest, res: Response): Promise<void> => {
+export const uploadCompanyLogo = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+    if (!req.file) {
+      res.status(400).json({ success: false, message: 'No file uploaded' });
       return;
     }
 
-    const user = await User.findById(req.params.id);
-    
-    if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
-    }
+    const logoUrl = `/uploads/${req.file.filename}`;
 
-    await User.findByIdAndDelete(req.params.id);
-
-    res.json({ message: 'User deleted successfully' });
+    res.json({ 
+      success: true, 
+      data: { 
+        logoUrl,
+        fileName: req.file.originalname
+      } 
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: (error as Error).message });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
