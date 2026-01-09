@@ -20,7 +20,7 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -30,8 +30,8 @@ export default function LoginPage() {
 
       if (response.ok) {
         const data = await response.json()
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('user', JSON.stringify(data.admin))
+        localStorage.setItem('token', data.data.token)
+        localStorage.setItem('user', JSON.stringify(data.data.admin))
         router.push('/dashboard')
       } else {
         const errorData = await response.json()

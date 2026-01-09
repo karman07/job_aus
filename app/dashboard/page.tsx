@@ -7,10 +7,27 @@ import { DashboardOverview } from '../../components/dashboard/overview'
 import { JobsManagement } from '../../components/dashboard/jobs-management'
 import { ApplicationsManagement } from '../../components/dashboard/applications-management'
 import { UsersManagement } from '../../components/dashboard/users-management'
+import { AdminManagement } from '../../components/dashboard/admin-management'
+import { DataManagement } from '../../components/dashboard/data-management'
+
+interface AnalyticsData {
+  jobs: any[]
+  applications: any[]
+  candidates: any[]
+  admins: any[]
+  lastUpdated: number
+}
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [user, setUser] = useState<any>(null)
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData>({
+    jobs: [],
+    applications: [],
+    candidates: [],
+    admins: [],
+    lastUpdated: 0
+  })
   const router = useRouter()
 
   useEffect(() => {
@@ -31,18 +48,30 @@ export default function DashboardPage() {
     }
   }, [router])
 
+  const updateAnalyticsData = (type: keyof Omit<AnalyticsData, 'lastUpdated'>, data: any[]) => {
+    setAnalyticsData(prev => ({
+      ...prev,
+      [type]: data,
+      lastUpdated: Date.now()
+    }))
+  }
+
   const renderContent = () => {
     switch (activeTab) {
       case 'overview':
-        return <DashboardOverview />
+        return <DashboardOverview analyticsData={analyticsData} />
       case 'jobs':
-        return <JobsManagement />
+        return <JobsManagement onDataUpdate={(data) => updateAnalyticsData('jobs', data)} />
       case 'applications':
-        return <ApplicationsManagement />
+        return <ApplicationsManagement onDataUpdate={(data) => updateAnalyticsData('applications', data)} />
       case 'users':
-        return <UsersManagement />
+        return <UsersManagement onDataUpdate={(data) => updateAnalyticsData('candidates', data)} />
+      case 'admins':
+        return <AdminManagement onDataUpdate={(data) => updateAnalyticsData('admins', data)} />
+      case 'data':
+        return <DataManagement />
       default:
-        return <DashboardOverview />
+        return <DashboardOverview analyticsData={analyticsData} />
     }
   }
 

@@ -1,30 +1,36 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Check, X, Eye, Search, Download, Calendar, User, Mail, Phone, FileText } from 'lucide-react'
+import { Eye, Search, FileText } from 'lucide-react'
 import { Pagination } from '../pagination'
 import { FileViewer } from '../pdf-viewer'
 
 interface Application {
   _id: string
-  jobId: {
-    _id: string
-    title: string
-    company: string
-  }
-  applicantName: string
+  candidateId: string
+  jobId: string
+  fullName: string
   email: string
   phone: string
-  experience: number
-  skills: string[]
-  coverLetter: string
-  resume: string
+  location: string
+  preferredRole: string
+  currentRole: string
+  currentCompany: string
+  yearsExperience: string
+  skills: string
+  education: string
+  resumeUrl: string
   status: string
-  notes: string
+  appliedAt: string
   createdAt: string
+  updatedAt: string
 }
 
-export function ApplicationsManagement() {
+interface ApplicationsManagementProps {
+  onDataUpdate?: (data: Application[]) => void
+}
+
+export function ApplicationsManagement({ onDataUpdate }: ApplicationsManagementProps) {
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -44,42 +50,18 @@ export function ApplicationsManagement() {
 
   const fetchApplications = async () => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/applications?page=${currentPage}&limit=${itemsPerPage}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/applications?page=${currentPage}&limit=${itemsPerPage}`)
       if (response.ok) {
         const data = await response.json()
-        setApplications(data.applications || [])
-        setTotalPages(data.pagination?.pages || 1)
+        const applicationsData = data.data?.applications || []
+        setApplications(applicationsData)
+        setTotalPages(data.data?.pagination?.totalPages || 1)
+        onDataUpdate?.(applicationsData)
       }
     } catch (error) {
       console.error('Error fetching applications:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const updateApplicationStatus = async (applicationId: string, status: string, notes: string = '') => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/applications/${applicationId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status, notes })
-      })
-
-      if (response.ok) {
-        fetchApplications()
-        setShowModal(false)
-      }
-    } catch (error) {
-      console.error('Error updating application:', error)
     }
   }
 
@@ -89,19 +71,10 @@ export function ApplicationsManagement() {
     setShowPDFViewer(true)
   }
 
-  const handleApprove = (applicationId: string) => {
-    updateApplicationStatus(applicationId, 'hired', 'Application approved by admin')
-  }
-
-  const handleReject = (applicationId: string) => {
-    updateApplicationStatus(applicationId, 'rejected', 'Application rejected by admin')
-  }
-
   const filteredApplications = applications.filter(app => {
     const matchesSearch = 
-      app.applicantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (app.jobId?.title || '').toLowerCase().includes(searchTerm.toLowerCase())
+      app.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.email.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter
     
@@ -110,15 +83,15 @@ export function ApplicationsManagement() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending':
+      case 'Pending':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-      case 'hired':
+      case 'Hired':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-      case 'rejected':
+      case 'Rejected':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-      case 'reviewed':
+      case 'Reviewed':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-      case 'shortlisted':
+      case 'Interview':
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
@@ -153,11 +126,11 @@ export function ApplicationsManagement() {
           className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
         >
           <option value="all">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="reviewed">Reviewed</option>
-          <option value="shortlisted">Shortlisted</option>
-          <option value="hired">Hired</option>
-          <option value="rejected">Rejected</option>
+          <option value="Pending">Pending</option>
+          <option value="Reviewed">Reviewed</option>
+          <option value="Interview">Interview</option>
+          <option value="Hired">Hired</option>
+          <option value="Rejected">Rejected</option>
         </select>
       </div>
 
@@ -169,9 +142,6 @@ export function ApplicationsManagement() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Applicant
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Job
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Experience
@@ -190,11 +160,11 @@ export function ApplicationsManagement() {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">Loading...</td>
+                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">Loading...</td>
                 </tr>
               ) : filteredApplications.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">No applications found</td>
+                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No applications found</td>
                 </tr>
               ) : (
                 filteredApplications.map((application) => (
@@ -202,25 +172,18 @@ export function ApplicationsManagement() {
                     <td className="px-6 py-4">
                       <div>
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {application.applicantName}
+                          {application.fullName}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
                           {application.email}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {application.jobId?.title || 'N/A'}
-                        </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {application.jobId?.company || 'N/A'}
+                          {application.currentRole} at {application.currentCompany}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                      {application.experience} years
+                      {application.yearsExperience}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(application.status)}`}>
@@ -228,7 +191,7 @@ export function ApplicationsManagement() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(application.createdAt).toLocaleDateString()}
+                      {new Date(application.appliedAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium">
                       <div className="flex items-center space-x-2">
@@ -243,30 +206,12 @@ export function ApplicationsManagement() {
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => handleViewResume(application.resume, application.applicantName)}
+                          onClick={() => handleViewResume(application.resumeUrl, application.fullName)}
                           className="text-purple-600 hover:text-purple-900 dark:text-purple-400"
                           title="View Resume"
                         >
                           <FileText className="h-4 w-4" />
                         </button>
-                        {application.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleApprove(application._id)}
-                              className="text-green-600 hover:text-green-900 dark:text-green-400"
-                              title="Hire"
-                            >
-                              <Check className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleReject(application._id)}
-                              className="text-red-600 hover:text-red-900 dark:text-red-400"
-                              title="Reject"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -296,7 +241,7 @@ export function ApplicationsManagement() {
                   onClick={() => setShowModal(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
-                  <X className="h-6 w-6" />
+                  ×
                 </button>
               </div>
 
@@ -308,47 +253,28 @@ export function ApplicationsManagement() {
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex items-center space-x-2">
-                      <User className="h-4 w-4 text-gray-400" />
                       <span className="text-sm text-gray-600 dark:text-gray-400">Name:</span>
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {selectedApplication.applicantName}
+                        {selectedApplication.fullName}
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
                       <span className="text-sm text-gray-600 dark:text-gray-400">Email:</span>
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
                         {selectedApplication.email}
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Phone className="h-4 w-4 text-gray-400" />
                       <span className="text-sm text-gray-600 dark:text-gray-400">Phone:</span>
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
                         {selectedApplication.phone}
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
                       <span className="text-sm text-gray-600 dark:text-gray-400">Experience:</span>
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {selectedApplication.experience} years
+                        {selectedApplication.yearsExperience}
                       </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Job Info */}
-                <div>
-                  <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
-                    Job Information
-                  </h4>
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                      {selectedApplication.jobId?.title || 'N/A'}
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      {selectedApplication.jobId?.company || 'N/A'}
                     </div>
                   </div>
                 </div>
@@ -358,76 +284,38 @@ export function ApplicationsManagement() {
                   <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
                     Skills
                   </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedApplication.skills.map((skill, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full"
-                      >
-                        {skill}
-                      </span>
-                    ))}
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    {selectedApplication.skills}
                   </div>
                 </div>
 
-                {/* Cover Letter */}
-                {selectedApplication.coverLetter && (
-                  <div>
-                    <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
-                      Cover Letter
-                    </h4>
-                    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                        {selectedApplication.coverLetter}
-                      </p>
-                    </div>
+                {/* Education */}
+                <div>
+                  <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
+                    Education
+                  </h4>
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      {selectedApplication.education || 'Not provided'}
+                    </p>
                   </div>
-                )}
+                </div>
 
                 {/* Resume */}
-                {selectedApplication.resume && (
+                {selectedApplication.resumeUrl && (
                   <div>
                     <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
                       Resume
                     </h4>
                     <div className="flex items-center space-x-4">
                       <button
-                        onClick={() => handleViewResume(selectedApplication.resume, selectedApplication.applicantName)}
+                        onClick={() => handleViewResume(selectedApplication.resumeUrl, selectedApplication.fullName)}
                         className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg transition-colors"
                       >
                         <FileText className="h-4 w-4" />
                         <span>View Resume</span>
                       </button>
-                      <a
-                        href={`${process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '')}/${selectedApplication.resume}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center space-x-2 text-green-600 hover:text-green-800 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-lg transition-colors"
-                      >
-                        <Download className="h-4 w-4" />
-                        <span>Download</span>
-                      </a>
                     </div>
-                  </div>
-                )}
-
-                {/* Status Actions */}
-                {selectedApplication.status === 'pending' && (
-                  <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <button
-                      onClick={() => handleReject(selectedApplication._id)}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center space-x-2"
-                    >
-                      <X className="h-4 w-4" />
-                      <span>Reject</span>
-                    </button>
-                    <button
-                      onClick={() => handleApprove(selectedApplication._id)}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center space-x-2"
-                    >
-                      <Check className="h-4 w-4" />
-                      <span>Hire</span>
-                    </button>
                   </div>
                 )}
               </div>
@@ -436,12 +324,14 @@ export function ApplicationsManagement() {
         </div>
       )}
 
-      <FileViewer
-        fileUrl={pdfUrl}
-        isOpen={showPDFViewer}
-        onClose={() => setShowPDFViewer(false)}
-        applicantName={pdfApplicantName}
-      />
+      {showPDFViewer && (
+        <FileViewer
+          fileUrl={pdfUrl}
+          isOpen={showPDFViewer}
+          onClose={() => setShowPDFViewer(false)}
+          applicantName={pdfApplicantName}
+        />
+      )}
     </div>
   )
 }

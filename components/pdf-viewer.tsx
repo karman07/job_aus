@@ -48,6 +48,7 @@ export function FileViewer({ fileUrl, isOpen, onClose, applicantName, fileType }
 
   const getFileType = () => {
     if (fileType) return fileType
+    if (!fileUrl) return 'unknown'
     const extension = fileUrl.split('.').pop()?.toLowerCase()
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) return 'image'
     if (extension === 'pdf') return 'pdf'

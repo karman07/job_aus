@@ -7,22 +7,42 @@ import { Pagination } from '../pagination'
 interface Job {
   _id: string
   title: string
-  company: string
-  location: string
-  type: string
-  salary: {
-    min: number
-    max: number
-    currency: string
-  }
   description: string
-  requirements: string[]
-  benefits: string[]
+  requirements: string
+  keyResponsibilities: string
+  location: string
+  state: string
+  type: string
+  jobTypeCategory: string
+  workType: string
+  industry: string
+  salaryDisplay: string
+  tags: string[]
   status: string
+  company: {
+    name: string
+    description: string
+    website: string
+    logo: string
+    size: string
+    founded: number
+    industry: string[]
+    location: string
+    contact: {
+      email: string
+      phone: string
+    }
+  }
+  applicantCount: number
+  viewCount: number
   createdAt: string
 }
 
-export function JobsManagement() {
+interface JobsManagementProps {
+  onDataUpdate?: (data: Job[]) => void
+}
+
+export function JobsManagement({ onDataUpdate }: JobsManagementProps) {
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -33,16 +53,27 @@ export function JobsManagement() {
   const itemsPerPage = 10
   const [formData, setFormData] = useState({
     title: '',
-    company: '',
-    location: '',
-    type: 'full-time',
-    salaryMin: '',
-    salaryMax: '',
-    currency: 'USD',
     description: '',
     requirements: '',
-    benefits: '',
-    status: 'active'
+    keyResponsibilities: '',
+    location: '',
+    state: 'NSW',
+    type: 'Full Time',
+    jobTypeCategory: 'Permanent',
+    workType: 'On-Site',
+    industry: 'technology',
+    salaryDisplay: '',
+    tags: '',
+    status: 'active',
+    companyName: '',
+    companyDescription: '',
+    companyWebsite: '',
+    companySize: '1-10',
+    companyFounded: new Date().getFullYear(),
+    companyIndustry: 'technology',
+    companyLocation: '',
+    companyEmail: '',
+    companyPhone: ''
   })
 
   useEffect(() => {
@@ -52,15 +83,17 @@ export function JobsManagement() {
   const fetchJobs = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?page=${currentPage}&limit=${itemsPerPage}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs/admin/all?page=${currentPage}&limit=${itemsPerPage}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       })
       if (response.ok) {
         const data = await response.json()
-        setJobs(data.jobs || [])
-        setTotalPages(data.pagination?.pages || 1)
+        const jobsData = data.data?.jobs || []
+        setJobs(jobsData)
+        setTotalPages(data.data?.pagination?.pages || 1)
+        onDataUpdate?.(jobsData)
       }
     } catch (error) {
       console.error('Error fetching jobs:', error)
@@ -73,40 +106,77 @@ export function JobsManagement() {
     e.preventDefault()
     const token = localStorage.getItem('token')
     
-    const jobData = {
-      title: formData.title,
-      company: formData.company,
-      location: formData.location,
-      type: formData.type,
-      salary: {
-        min: parseInt(formData.salaryMin),
-        max: parseInt(formData.salaryMax),
-        currency: formData.currency
-      },
-      description: formData.description,
-      requirements: formData.requirements.split('\n').filter(r => r.trim()),
-      benefits: formData.benefits.split('\n').filter(b => b.trim()),
-      status: formData.status
-    }
-
     try {
-      const url = editingJob 
-        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs/${editingJob._id}`
-        : `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
-      
-      const response = await fetch(url, {
-        method: editingJob ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(jobData)
-      })
+      if (editingJob) {
+        // For updates, use JSON
+        const jobData = {
+          title: formData.title,
+          description: formData.description,
+          requirements: formData.requirements,
+          keyResponsibilities: formData.keyResponsibilities,
+          location: formData.location,
+          state: formData.state,
+          type: formData.type,
+          jobTypeCategory: formData.jobTypeCategory,
+          workType: formData.workType,
+          industry: formData.industry,
+          salaryDisplay: formData.salaryDisplay,
+          tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+          status: formData.status
+        }
 
-      if (response.ok) {
-        fetchJobs()
-        setShowModal(false)
-        resetForm()
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs/admin/${editingJob._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(jobData)
+        })
+
+        if (response.ok) {
+          fetchJobs()
+          setShowModal(false)
+          resetForm()
+        }
+      } else {
+        // For creation, use FormData
+        const formDataObj = new FormData()
+        formDataObj.append('title', formData.title)
+        formDataObj.append('description', formData.description)
+        formDataObj.append('requirements', formData.requirements)
+        formDataObj.append('keyResponsibilities', formData.keyResponsibilities)
+        formDataObj.append('location', formData.location)
+        formDataObj.append('state', formData.state)
+        formDataObj.append('type', formData.type)
+        formDataObj.append('jobTypeCategory', formData.jobTypeCategory)
+        formDataObj.append('workType', formData.workType)
+        formDataObj.append('industry', formData.industry)
+        formDataObj.append('salaryDisplay', formData.salaryDisplay)
+        formDataObj.append('tags', JSON.stringify(formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)))
+        formDataObj.append('company.name', formData.companyName)
+        formDataObj.append('company.description', formData.companyDescription)
+        formDataObj.append('company.website', formData.companyWebsite)
+        formDataObj.append('company.size', formData.companySize)
+        formDataObj.append('company.founded', formData.companyFounded.toString())
+        formDataObj.append('company.industry', JSON.stringify([formData.companyIndustry]))
+        formDataObj.append('company.location', formData.companyLocation)
+        formDataObj.append('company.contact.email', formData.companyEmail)
+        formDataObj.append('company.contact.phone', formData.companyPhone)
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formDataObj
+        })
+
+        if (response.ok) {
+          fetchJobs()
+          setShowModal(false)
+          resetForm()
+        }
       }
     } catch (error) {
       console.error('Error saving job:', error)
@@ -117,16 +187,27 @@ export function JobsManagement() {
     setEditingJob(job)
     setFormData({
       title: job.title,
-      company: job.company,
-      location: job.location,
-      type: job.type,
-      salaryMin: job.salary.min.toString(),
-      salaryMax: job.salary.max.toString(),
-      currency: job.salary.currency,
       description: job.description,
-      requirements: job.requirements.join('\n'),
-      benefits: job.benefits.join('\n'),
-      status: job.status
+      requirements: job.requirements,
+      keyResponsibilities: job.keyResponsibilities,
+      location: job.location,
+      state: job.state,
+      type: job.type,
+      jobTypeCategory: job.jobTypeCategory,
+      workType: job.workType,
+      industry: job.industry,
+      salaryDisplay: job.salaryDisplay,
+      tags: job.tags.join(', '),
+      status: job.status,
+      companyName: job.company.name,
+      companyDescription: job.company.description,
+      companyWebsite: job.company.website,
+      companySize: job.company.size,
+      companyFounded: job.company.founded,
+      companyIndustry: job.company.industry[0] || 'technology',
+      companyLocation: job.company.location,
+      companyEmail: job.company.contact.email,
+      companyPhone: job.company.contact.phone
     })
     setShowModal(true)
   }
@@ -136,7 +217,7 @@ export function JobsManagement() {
     
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs/${jobId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs/admin/${jobId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -154,23 +235,34 @@ export function JobsManagement() {
   const resetForm = () => {
     setFormData({
       title: '',
-      company: '',
-      location: '',
-      type: 'full-time',
-      salaryMin: '',
-      salaryMax: '',
-      currency: 'USD',
       description: '',
       requirements: '',
-      benefits: '',
-      status: 'active'
+      keyResponsibilities: '',
+      location: '',
+      state: 'NSW',
+      type: 'Full Time',
+      jobTypeCategory: 'Permanent',
+      workType: 'On-Site',
+      industry: 'technology',
+      salaryDisplay: '',
+      tags: '',
+      status: 'active',
+      companyName: '',
+      companyDescription: '',
+      companyWebsite: '',
+      companySize: '1-10',
+      companyFounded: new Date().getFullYear(),
+      companyIndustry: 'technology',
+      companyLocation: '',
+      companyEmail: '',
+      companyPhone: ''
     })
     setEditingJob(null)
   }
 
   const filteredJobs = jobs.filter(job =>
     job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    job.company.toLowerCase().includes(searchTerm.toLowerCase())
+    job.company.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
@@ -220,6 +312,9 @@ export function JobsManagement() {
                   Salary
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Applications
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -230,11 +325,11 @@ export function JobsManagement() {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">Loading...</td>
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">Loading...</td>
                 </tr>
               ) : filteredJobs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No jobs found</td>
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">No jobs found</td>
                 </tr>
               ) : (
                 filteredJobs.map((job) => (
@@ -242,18 +337,26 @@ export function JobsManagement() {
                     <td className="px-6 py-4">
                       <div>
                         <div className="text-sm font-medium text-gray-900 dark:text-white">{job.title}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">{job.location} • {job.type}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{job.location}, {job.state} • {job.type}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{job.workType} • {job.industry}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">{job.company}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">{job.company.name}</td>
                     <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                      {job.salary.currency} {job.salary.min.toLocaleString()} - {job.salary.max.toLocaleString()}
+                      {job.salaryDisplay || 'Not specified'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                      {job.applicantCount || 0}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         job.status === 'active' 
                           ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          : job.status === 'inactive'
+                          ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          : job.status === 'draft'
+                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                       }`}>
                         {job.status}
                       </span>
@@ -289,151 +392,336 @@ export function JobsManagement() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 {editingJob ? 'Edit Job' : 'Add New Job'}
               </h3>
               
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Job Details */}
+                <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+                  <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">Job Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Job Title
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.title}
+                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Industry
+                      </label>
+                      <select
+                        value={formData.industry}
+                        onChange={(e) => setFormData({...formData, industry: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="technology">Technology</option>
+                        <option value="health">Health</option>
+                        <option value="hospitality">Hospitality</option>
+                        <option value="childcare">Childcare</option>
+                        <option value="construction">Construction</option>
+                        <option value="mining">Mining</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Job Title
+                      Description
                     </label>
-                    <input
-                      type="text"
+                    <textarea
+                      rows={3}
                       required
-                      value={formData.title}
-                      onChange={(e) => setFormData({...formData, title: e.target.value})}
+                      value={formData.description}
+                      onChange={(e) => setFormData({...formData, description: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                     />
                   </div>
-                  
-                  <div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Requirements
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={formData.requirements}
+                        onChange={(e) => setFormData({...formData, requirements: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Key Responsibilities
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={formData.keyResponsibilities}
+                        onChange={(e) => setFormData({...formData, keyResponsibilities: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Location & Job Type */}
+                <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+                  <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">Location & Type</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Location
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.location}
+                        onChange={(e) => setFormData({...formData, location: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        State
+                      </label>
+                      <select
+                        value={formData.state}
+                        onChange={(e) => setFormData({...formData, state: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="NSW">NSW</option>
+                        <option value="VIC">VIC</option>
+                        <option value="QLD">QLD</option>
+                        <option value="WA">WA</option>
+                        <option value="SA">SA</option>
+                        <option value="TAS">TAS</option>
+                        <option value="ACT">ACT</option>
+                        <option value="NT">NT</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Job Type
+                      </label>
+                      <select
+                        value={formData.type}
+                        onChange={(e) => setFormData({...formData, type: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="Full Time">Full Time</option>
+                        <option value="Part Time">Part Time</option>
+                        <option value="Contract">Contract</option>
+                        <option value="FIFO 2:1">FIFO 2:1</option>
+                        <option value="FIFO 8:6">FIFO 8:6</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Category
+                      </label>
+                      <select
+                        value={formData.jobTypeCategory}
+                        onChange={(e) => setFormData({...formData, jobTypeCategory: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="Permanent">Permanent</option>
+                        <option value="Contract">Contract</option>
+                        <option value="Apprenticeship">Apprenticeship</option>
+                        <option value="Trainee">Trainee</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Work Type
+                      </label>
+                      <select
+                        value={formData.workType}
+                        onChange={(e) => setFormData({...formData, workType: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="On-Site">On-Site</option>
+                        <option value="Remote">Remote</option>
+                        <option value="Hybrid">Hybrid</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Salary Display
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g., $80,000 - $100,000"
+                        value={formData.salaryDisplay}
+                        onChange={(e) => setFormData({...formData, salaryDisplay: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Tags (comma separated)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="JavaScript, React, Node.js"
+                        value={formData.tags}
+                        onChange={(e) => setFormData({...formData, tags: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Company Details */}
+                <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+                  <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">Company Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Company Name
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.companyName}
+                        onChange={(e) => setFormData({...formData, companyName: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Company Website
+                      </label>
+                      <input
+                        type="url"
+                        value={formData.companyWebsite}
+                        onChange={(e) => setFormData({...formData, companyWebsite: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Company
+                      Company Description
                     </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.company}
-                      onChange={(e) => setFormData({...formData, company: e.target.value})}
+                    <textarea
+                      rows={2}
+                      value={formData.companyDescription}
+                      onChange={(e) => setFormData({...formData, companyDescription: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Location
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.location}
-                      onChange={(e) => setFormData({...formData, location: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Company Size
+                      </label>
+                      <select
+                        value={formData.companySize}
+                        onChange={(e) => setFormData({...formData, companySize: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="1-10">1-10</option>
+                        <option value="11-50">11-50</option>
+                        <option value="51-100">51-100</option>
+                        <option value="101-500">101-500</option>
+                        <option value="500+">500+</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Founded Year
+                      </label>
+                      <input
+                        type="number"
+                        min="1900"
+                        max={new Date().getFullYear()}
+                        value={formData.companyFounded}
+                        onChange={(e) => setFormData({...formData, companyFounded: parseInt(e.target.value)})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Company Industry
+                      </label>
+                      <select
+                        value={formData.companyIndustry}
+                        onChange={(e) => setFormData({...formData, companyIndustry: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="technology">Technology</option>
+                        <option value="health">Health</option>
+                        <option value="hospitality">Hospitality</option>
+                        <option value="childcare">Childcare</option>
+                        <option value="construction">Construction</option>
+                        <option value="mining">Mining</option>
+                      </select>
+                    </div>
                   </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Job Type
-                    </label>
-                    <select
-                      value={formData.type}
-                      onChange={(e) => setFormData({...formData, type: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    >
-                      <option value="full-time">Full Time</option>
-                      <option value="part-time">Part Time</option>
-                      <option value="contract">Contract</option>
-                      <option value="internship">Internship</option>
-                    </select>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Min Salary
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      value={formData.salaryMin}
-                      onChange={(e) => setFormData({...formData, salaryMin: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Company Location
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.companyLocation}
+                        onChange={(e) => setFormData({...formData, companyLocation: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Contact Email
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.companyEmail}
+                        onChange={(e) => setFormData({...formData, companyEmail: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Contact Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.companyPhone}
+                        onChange={(e) => setFormData({...formData, companyPhone: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
                   </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Max Salary
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      value={formData.salaryMax}
-                      onChange={(e) => setFormData({...formData, salaryMax: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Currency
-                    </label>
-                    <select
-                      value={formData.currency}
-                      onChange={(e) => setFormData({...formData, currency: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    >
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                      <option value="GBP">GBP</option>
-                      <option value="AUD">AUD</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    rows={3}
-                    required
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Requirements (one per line)
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={formData.requirements}
-                    onChange={(e) => setFormData({...formData, requirements: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Benefits (one per line)
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={formData.benefits}
-                    onChange={(e) => setFormData({...formData, benefits: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  />
                 </div>
 
                 <div>
@@ -447,6 +735,8 @@ export function JobsManagement() {
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
+                    <option value="draft">Draft</option>
+                    <option value="expired">Expired</option>
                   </select>
                 </div>
 
