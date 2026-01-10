@@ -1,12 +1,15 @@
 import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  host: "email-smtp.eu-north-1.amazonaws.com",
-  port: 587,
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false,
   auth: {
-    user: "AKIAVEWO74GVYN4MU3X5",
-    pass: "BDn/wWYBOvFwAPaxgvs+7rloHryqx3OqW+3+CHXkwMm5",
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
   },
 });
 
@@ -32,7 +35,7 @@ const processEmailQueue = async () => {
       try {
         console.log(`Attempting to send email to: ${email.to}`);
         await transporter.sendMail({
-          from: '"No Reply Test" <no-reply@crossnation.com.au>',
+          from: `"${process.env.SMTP_FROM_NAME}" <${process.env.SMTP_FROM_EMAIL}>`,
           to: email.to,
           subject: email.subject,
           html: email.html,
