@@ -127,6 +127,19 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     console.log('📊 Job Status in DB:', savedJob.status);
     console.log('🏢 Company Name in DB:', savedJob.company?.name);
 
+    // Send job creation notification email
+    try {
+      const { sendJobCreationNotification } = require('../services/emailService');
+      await sendJobCreationNotification(
+        savedJob.title,
+        savedJob.company?.name || 'Unknown Company',
+        savedJob.company?.contact?.email
+      );
+      console.log('Job creation notification email sent');
+    } catch (emailError) {
+      console.error('Failed to send job creation email:', emailError);
+    }
+
     // Verify the job was actually saved by querying it back
     const verifyJob = await Job.findById(savedJob._id);
     if (verifyJob) {

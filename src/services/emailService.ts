@@ -104,27 +104,66 @@ export const sendJobApplicationNotification = async (
   processEmailQueue();
 };
 
-export const sendApplicationConfirmation = async (
-  applicantEmail: string,
-  applicantName: string,
-  jobTitle: string,
-  companyName: string
+export const sendCandidateWelcomeEmail = async (
+  candidateEmail: string,
+  candidateName: string
 ) => {
-  console.log('Queuing application confirmation email...');
-  const confirmationContent = `
-    <h2>Application Submitted Successfully</h2>
-    <p>Dear ${applicantName},</p>
-    <p>Thank you for applying for the position of <strong>${jobTitle}</strong> at <strong>${companyName}</strong>.</p>
-    <p>We have received your application and will review it shortly. You will be contacted if your profile matches our requirements.</p>
+  console.log('Queuing candidate welcome email...');
+  const welcomeContent = `
+    <h2>Welcome to CrossNations Job Portal!</h2>
+    <p>Dear ${candidateName},</p>
+    <p>Thank you for registering with CrossNations Job Portal. Your profile has been created successfully.</p>
+    <p>You can now browse and apply for jobs that match your skills and preferences.</p>
     <p>Best regards,<br>CrossNations Job Portal Team</p>
   `;
 
   emailQueue.push({
-    to: applicantEmail,
-    subject: `Application Confirmation: ${jobTitle}`,
-    html: confirmationContent
+    to: candidateEmail,
+    subject: 'Welcome to CrossNations Job Portal',
+    html: welcomeContent
   });
-  console.log(`Confirmation email queued for applicant: ${applicantEmail}`);
+  console.log(`Welcome email queued for candidate: ${candidateEmail}`);
+
+  processEmailQueue();
+};
+
+export const sendJobCreationNotification = async (
+  jobTitle: string,
+  companyName: string,
+  companyEmail?: string
+) => {
+  console.log('Queuing job creation notifications...');
+  const adminEmail = "karmansingharora01@gmail.com";
+  
+  const emailContent = `
+    <h2>New Job Posted</h2>
+    <p><strong>Job Title:</strong> ${jobTitle}</p>
+    <p><strong>Company:</strong> ${companyName}</p>
+    <p><strong>Posted At:</strong> ${new Date().toLocaleString()}</p>
+  `;
+
+  // Notify admin
+  emailQueue.push({
+    to: adminEmail,
+    subject: `New Job Posted: ${jobTitle}`,
+    html: emailContent
+  });
+  console.log(`Job creation notification queued for admin: ${adminEmail}`);
+
+  // Notify company if email exists
+  if (companyEmail) {
+    emailQueue.push({
+      to: companyEmail,
+      subject: `Job Posted Successfully: ${jobTitle}`,
+      html: `
+        <h2>Job Posted Successfully</h2>
+        <p>Your job posting for <strong>${jobTitle}</strong> has been published on CrossNations Job Portal.</p>
+        <p>You will receive notifications when candidates apply for this position.</p>
+        <p>Best regards,<br>CrossNations Job Portal Team</p>
+      `
+    });
+    console.log(`Job creation confirmation queued for company: ${companyEmail}`);
+  }
 
   processEmailQueue();
 };

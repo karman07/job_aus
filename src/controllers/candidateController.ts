@@ -5,10 +5,24 @@ import fs from 'fs';
 
 export const createCandidate = async (req: Request, res: Response): Promise<void> => {
   try {
+    const { sendCandidateWelcomeEmail } = require('../services/emailService');
+    
     console.log('Creating candidate with data:', req.body);
     const candidate = new CandidateProfile(req.body);
     const savedCandidate = await candidate.save();
     console.log('Candidate saved successfully:', savedCandidate._id);
+    
+    // Send welcome email to candidate
+    try {
+      await sendCandidateWelcomeEmail(
+        savedCandidate.email || req.body.email,
+        savedCandidate.fullName || req.body.fullName || 'Candidate'
+      );
+      console.log('Welcome email sent to candidate');
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+    }
+    
     res.status(201).json({ success: true, data: { candidate: savedCandidate } });
   } catch (error) {
     console.error('Error creating candidate:', error);
