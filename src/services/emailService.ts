@@ -65,7 +65,7 @@ export const sendJobApplicationNotification = async (
   companyEmail?: string
 ) => {
   console.log('Queuing job application notifications...');
-  const adminEmail = "karmansingharora01@gmail.com";
+  const adminEmail = process.env.ADMIN_EMAIL || "karmansingharora01@gmail.com";
   
   const emailContent = `
     <h2>New Job Application Received</h2>
@@ -136,7 +136,7 @@ export const sendJobCreationNotification = async (
   companyEmail?: string
 ) => {
   console.log('Queuing job creation notifications...');
-  const adminEmail = "karmansingharora01@gmail.com";
+  const adminEmail = process.env.ADMIN_EMAIL || "karmansingharora01@gmail.com";
   
   const emailContent = `
     <h2>New Job Posted</h2>
@@ -167,6 +167,31 @@ export const sendJobCreationNotification = async (
     });
     console.log(`Job creation confirmation queued for company: ${companyEmail}`);
   }
+
+  processEmailQueue();
+};
+
+export const sendApplicationConfirmation = async (
+  applicantEmail: string,
+  applicantName: string,
+  jobTitle: string,
+  companyName: string
+) => {
+  console.log('Queuing application confirmation email...');
+  const confirmationContent = `
+    <h2>Application Submitted Successfully</h2>
+    <p>Dear ${applicantName},</p>
+    <p>Thank you for applying for the position of <strong>${jobTitle}</strong> at <strong>${companyName}</strong>.</p>
+    <p>We have received your application and will review it shortly. You will be contacted if your profile matches our requirements.</p>
+    <p>Best regards,<br>CrossNations Job Portal Team</p>
+  `;
+
+  emailQueue.push({
+    to: applicantEmail,
+    subject: `Application Confirmation: ${jobTitle}`,
+    html: confirmationContent
+  });
+  console.log(`Confirmation email queued for applicant: ${applicantEmail}`);
 
   processEmailQueue();
 };
