@@ -5,19 +5,6 @@ This document outlines the database schema for the CrossNations job portal backe
 
 ## Schema Architecture
 
-### User Model
-```typescript
-interface IUser {
-  _id: ObjectId;
-  email: string;
-  password: string;
-  role: 'candidate' | 'employer' | 'admin';
-  isEmailVerified: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-```
-
 ### Candidate Profile Model
 ```typescript
 interface ICandidateProfile {

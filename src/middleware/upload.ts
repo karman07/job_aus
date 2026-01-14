@@ -31,15 +31,40 @@ const resumeFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFi
   }
 };
 
-// File filter for logos
-const logoFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+// File filter for logos and images
+const imageFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const allowedTypes = ['.jpg', '.jpeg', '.png', '.svg'];
   const fileExt = path.extname(file.originalname).toLowerCase();
   
   if (allowedTypes.includes(fileExt)) {
     cb(null, true);
   } else {
-    cb(new Error('Only JPG, PNG, and SVG files are allowed for logos'));
+    cb(new Error('Only JPG, PNG, and SVG files are allowed for images'));
+  }
+};
+
+// File filter for markdown files
+const markdownFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedTypes = ['.md', '.markdown'];
+  const fileExt = path.extname(file.originalname).toLowerCase();
+  
+  if (allowedTypes.includes(fileExt)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only MD and MARKDOWN files are allowed'));
+  }
+};
+
+// General file filter for job content
+const jobContentFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const imageTypes = ['.jpg', '.jpeg', '.png', '.svg'];
+  const markdownTypes = ['.md', '.markdown'];
+  const fileExt = path.extname(file.originalname).toLowerCase();
+  
+  if (imageTypes.includes(fileExt) || markdownTypes.includes(fileExt)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files (JPG, PNG, SVG) and markdown files (MD) are allowed'));
   }
 };
 
@@ -55,8 +80,26 @@ export const resumeUpload = multer({
 // Logo upload configuration
 export const logoUpload = multer({
   storage: storage,
-  fileFilter: logoFileFilter,
+  fileFilter: imageFileFilter,
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
+// Job content upload (images and markdown)
+export const jobContentUpload = multer({
+  storage: storage,
+  fileFilter: jobContentFileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
+// Markdown upload configuration
+export const markdownUpload = multer({
+  storage: storage,
+  fileFilter: markdownFileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });

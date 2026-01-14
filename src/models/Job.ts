@@ -5,7 +5,7 @@ interface ICompany {
   description?: string;
   website?: string;
   logo?: string;
-  size?: '1-10' | '11-50' | '51-200' | '201-500' | '500+';
+  size?: string;
   founded?: number;
   industry?: ('health' | 'hospitality' | 'childcare' | 'construction' | 'mining' | 'technology')[];
   location?: string;
@@ -17,16 +17,20 @@ interface ICompany {
 
 export interface IJob extends Document {
   title: string;
-  description: string;
-  requirements: string;
-  keyResponsibilities: string;
+  description?: string;
+  requirements?: string;
+  keyResponsibilities?: string;
+  contentFile?: string;
   location: string;
   state: 'NSW' | 'VIC' | 'QLD' | 'WA' | 'SA' | 'TAS' | 'ACT' | 'NT';
   type: 'Full Time' | 'Part Time' | 'Contract' | 'FIFO 2:1' | 'FIFO 8:6';
   jobTypeCategory: 'Permanent' | 'Contract' | 'Apprenticeship' | 'Trainee';
   workType: 'On-Site' | 'Remote' | 'Hybrid';
   industry: 'health' | 'hospitality' | 'childcare' | 'construction' | 'mining' | 'technology';
-  salaryDisplay: string;
+  salaryDisplay?: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  sponsorshipAvailable?: boolean;
   tags: string[];
   status: 'active' | 'inactive' | 'closed';
   company?: ICompany;
@@ -49,10 +53,7 @@ const companySchema = new Schema({
     }
   },
   logo: { type: String },
-  size: {
-    type: String,
-    enum: ['1-10', '11-50', '51-200', '201-500', '500+']
-  },
+  size: { type: String },
   founded: { type: Number },
   industry: [{
     type: String,
@@ -72,16 +73,16 @@ const jobSchema = new Schema<IJob>({
     trim: true
   },
   description: {
-    type: String,
-    required: true
+    type: String
   },
   requirements: {
-    type: String,
-    required: true
+    type: String
   },
   keyResponsibilities: {
-    type: String,
-    required: true
+    type: String
+  },
+  contentFile: {
+    type: String
   },
   location: {
     type: String,
@@ -113,8 +114,19 @@ const jobSchema = new Schema<IJob>({
     required: true
   },
   salaryDisplay: {
-    type: String,
-    required: true
+    type: String
+  },
+  salaryMin: {
+    type: Number,
+    min: 0
+  },
+  salaryMax: {
+    type: Number,
+    min: 0
+  },
+  sponsorshipAvailable: {
+    type: Boolean,
+    default: false
   },
   tags: [{
     type: String
@@ -142,6 +154,7 @@ jobSchema.index({ location: 1, state: 1 });
 jobSchema.index({ industry: 1 });
 jobSchema.index({ type: 1 });
 jobSchema.index({ status: 1 });
+jobSchema.index({ salaryMin: 1, salaryMax: 1 });
 jobSchema.index({ createdAt: -1 });
 
 export default mongoose.model<IJob>('Job', jobSchema);

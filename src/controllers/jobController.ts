@@ -49,7 +49,7 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
   try {
     console.log('📝 Job creation request received:', {
       body: req.body,
-      file: req.file ? req.file.filename : 'No file',
+      files: req.files,
       companyIndustry: req.body['company.industry']
     });
 
@@ -63,11 +63,22 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Handle logo file if uploaded
+    // Handle file uploads
     let logoUrl = '';
-    if (req.file) {
-      logoUrl = `/uploads/${req.file.filename}`;
-      console.log('📁 Logo uploaded:', logoUrl);
+    let contentFileUrl = '';
+    
+    if (req.files) {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      
+      if (files.logo && files.logo[0]) {
+        logoUrl = `/uploads/${files.logo[0].filename}`;
+        console.log('📁 Logo uploaded:', logoUrl);
+      }
+      
+      if (files.contentFile && files.contentFile[0]) {
+        contentFileUrl = `/uploads/${files.contentFile[0].filename}`;
+        console.log('📁 Content file uploaded:', contentFileUrl);
+      }
     }
 
     // Parse company data from form fields
@@ -81,7 +92,7 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
       industry: (() => {
         const industryStr = req.body['company.industry'];
         if (!industryStr || industryStr === '[]' || industryStr === '') {
-          return ['technology']; // Default to technology if empty
+          return ['technology'];
         }
         try {
           const parsed = JSON.parse(industryStr);
@@ -97,12 +108,13 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
       }
     };
 
-    // Parse job data
+    // Parse job data - use either text fields or content file
     const jobData = {
       title: req.body.title,
-      description: req.body.description,
-      requirements: req.body.requirements,
-      keyResponsibilities: req.body.keyResponsibilities,
+      description: contentFileUrl ? undefined : req.body.description,
+      requirements: contentFileUrl ? undefined : req.body.requirements,
+      keyResponsibilities: contentFileUrl ? undefined : req.body.keyResponsibilities,
+      contentFile: contentFileUrl || undefined,
       location: req.body.location,
       state: req.body.state,
       type: req.body.type,
@@ -112,7 +124,7 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
       salaryDisplay: req.body.salaryDisplay,
       tags: req.body.tags ? JSON.parse(req.body.tags) : [],
       company: companyData,
-      status: 'active' // Set to active by default
+      status: 'active'
     };
 
     console.log('💾 About to save job data to MongoDB:', jobData);
@@ -214,10 +226,65 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
 
 export const updateJob = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log('📝 Job update request received:', {
+      body: req.body,
+      files: req.files,
+      jobId: req.params.id
+    });
+
+    // Handle file uploads
+    let logoUrl = '';
+    let contentFileUrl = '';
+    
+    if (req.files) {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      
+      if (files.logo && files.logo[0]) {
+        logoUrl = `/uploads/${files.logo[0].filename}`;
+        console.log('📁 New logo uploaded:', logoUrl);
+      }
+      
+      if (files.contentFile && files.contentFile[0]) {
+        contentFileUrl = `/uploads/${files.contentFile[0].filename}`;
+        console.log('📁 New content file uploaded:', contentFileUrl);
+      }
+    }
+
+    // Build update data - only include non-empty fields
+    const updateData: any = {};
+    
+    Object.keys(req.body).forEach(key => {
+      if (req.body[key] !== '' && req.body[key] !== null && req.body[key] !== undefined) {
+        // Parse JSON strings for arrays
+        if (key === 'tags' || key === 'company.industry') {
+          try {
+            updateData[key] = JSON.parse(req.body[key]);
+          } catch {
+            updateData[key] = req.body[key];
+          }
+        } else {
+          updateData[key] = req.body[key];
+        }
+      }
+    });
+    
+    // Update logo if uploaded
+    if (logoUrl) {
+      updateData['company.logo'] = logoUrl;
+    }
+    
+    // Update contentFile if uploaded
+    if (contentFileUrl) {
+      updateData.contentFile = contentFileUrl;
+      updateData.description = undefined;
+      updateData.requirements = undefined;
+      updateData.keyResponsibilities = undefined;
+    }
+
     const job = await Job.findByIdAndUpdate(
       req.params.id,
-      req.body,
-      { new: true, runValidators: true }
+      updateData,
+      { new: true, runValidators: true, omitUndefined: true }
     );
 
     if (!job) {
@@ -225,8 +292,10 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    console.log('✅ Job updated successfully:', job._id);
     res.json({ success: true, data: { job } });
   } catch (error) {
+    console.error('❌ Error updating job:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };

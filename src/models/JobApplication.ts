@@ -105,7 +105,6 @@ const jobApplicationSchema = new Schema<IJobApplication>({
 // Indexes
 jobApplicationSchema.index({ candidateId: 1 });
 jobApplicationSchema.index({ jobId: 1 });
-jobApplicationSchema.index({ candidateId: 1, jobId: 1 }, { unique: true });
 jobApplicationSchema.index({ status: 1 });
 jobApplicationSchema.index({ appliedAt: -1 });
 
