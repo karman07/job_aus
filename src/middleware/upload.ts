@@ -55,16 +55,20 @@ const markdownFileFilter = (req: any, file: Express.Multer.File, cb: multer.File
   }
 };
 
-// General file filter for job content
+// General file filter for job content (PDF, MD, and images for logo)
 const jobContentFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const imageTypes = ['.jpg', '.jpeg', '.png', '.svg'];
   const markdownTypes = ['.md', '.markdown'];
+  const pdfTypes = ['.pdf'];
   const fileExt = path.extname(file.originalname).toLowerCase();
   
-  if (imageTypes.includes(fileExt) || markdownTypes.includes(fileExt)) {
+  // Allow images for logo field, PDF and MD for contentFile field
+  if (file.fieldname === 'logo' && imageTypes.includes(fileExt)) {
+    cb(null, true);
+  } else if (file.fieldname === 'contentFile' && (markdownTypes.includes(fileExt) || pdfTypes.includes(fileExt))) {
     cb(null, true);
   } else {
-    cb(new Error('Only image files (JPG, PNG, SVG) and markdown files (MD) are allowed'));
+    cb(new Error(`Invalid file type for ${file.fieldname}. Logo accepts images (JPG, PNG, SVG), contentFile accepts PDF and MD files`));
   }
 };
 
