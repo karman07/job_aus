@@ -36,6 +36,10 @@ export interface IJob extends Document {
   company?: ICompany;
   postedBy?: string;
   applicantCount: number;
+  customFields?: Array<{
+    label: string;
+    value: string;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -144,7 +148,17 @@ const jobSchema = new Schema<IJob>({
   applicantCount: {
     type: Number,
     default: 0
-  }
+  },
+  customFields: [{
+    label: {
+      type: String,
+      trim: true
+    },
+    value: {
+      type: String,
+      trim: true
+    }
+  }]
 }, {
   timestamps: true
 });

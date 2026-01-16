@@ -21,6 +21,12 @@ export interface IJobApplication extends Document {
   // Documents (Step 3)
   resumeUrl: string;
   
+  // Custom Fields - Dynamic fields added by employer
+  customFields?: Array<{
+    fieldName: string;
+    fieldValue: string;
+  }>;
+  
   // Metadata
   appliedAt: Date;
   status: 'Pending' | 'Reviewed' | 'Interview' | 'Rejected' | 'Hired';
@@ -87,6 +93,16 @@ const jobApplicationSchema = new Schema<IJobApplication>({
   resumeUrl: {
     type: String
   },
+  
+  // Custom Fields
+  customFields: [{
+    fieldName: {
+      type: String
+    },
+    fieldValue: {
+      type: String
+    }
+  }],
   
   // Metadata
   appliedAt: {
