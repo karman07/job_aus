@@ -8,7 +8,7 @@ import {
   getAllJobs,
   getJobById
 } from '../controllers/jobController';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requireEmployer } from '../middleware/auth';
 
 import { jobContentUpload } from '../middleware/upload';
 
@@ -27,10 +27,15 @@ const jobValidation = [
 
 // Public routes
 router.get('/', getJobs);
-router.post('/', jobContentUpload.fields([
-  { name: 'logo', maxCount: 1 },
+
+// Employer routes - require authentication
+router.post('/', authenticateToken, requireEmployer, jobContentUpload.fields([
   { name: 'contentFile', maxCount: 1 }
 ]), jobValidation, createJob);
+
+router.put('/:id', authenticateToken, requireEmployer, jobContentUpload.fields([
+  { name: 'contentFile', maxCount: 1 }
+]), updateJob);
 
 // Admin routes
 router.get('/admin/all', authenticateToken, getAllJobs);

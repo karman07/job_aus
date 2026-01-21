@@ -138,12 +138,21 @@ const jobSchema = new Schema<IJob>({
   status: {
     type: String,
     enum: ['active', 'inactive', 'closed'],
-    default: 'active'
+    default: 'inactive'
   },
   company: companySchema,
   postedBy: {
     type: String,
-    ref: 'User'
+    ref: 'User',
+    required: true,
+    validate: {
+      validator: async function(userId: string) {
+        const User = mongoose.model('User');
+        const user = await User.findById(userId);
+        return user && user.role === 'employer';
+      },
+      message: 'Job can only be posted by employers'
+    }
   },
   applicantCount: {
     type: Number,

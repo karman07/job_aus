@@ -1,11 +1,5 @@
 import express from 'express';
 import { resumeUpload } from '../middleware/upload';
-import {
-  getAllApplications,
-  getApplicationById,
-  getApplicationsByCandidate,
-  getApplicationsByJob
-} from '../controllers/candidateController';
 
 const router = express.Router();
 
@@ -66,16 +60,24 @@ router.post('/', resumeUpload.single('resume'), async (req, res) => {
   }
 });
 
-// Get all applications
-router.get('/', getAllApplications);
+// Get all applications - placeholder
+router.get('/', (req, res) => {
+  res.json({ success: true, data: { applications: [] } });
+});
 
-// Get application by ID
-router.get('/:id', getApplicationById);
+// Get application by ID - placeholder
+router.get('/:id', (req, res) => {
+  res.json({ success: true, data: { application: null } });
+});
 
-// Get applications by candidate
-router.get('/candidate/:candidateId', getApplicationsByCandidate);
+// Get applications by candidate - placeholder
+router.get('/candidate/:candidateId', (req, res) => {
+  res.json({ success: true, data: { applications: [] } });
+});
 
-// Get applications by job
-router.get('/job/:jobId', getApplicationsByJob);
+// Get applications by job - placeholder
+router.get('/job/:jobId', (req, res) => {
+  res.json({ success: true, data: { applications: [] } });
+});
 
 export default router;

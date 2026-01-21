@@ -31,3 +31,4 @@ export { default as JobApplication } from './JobApplication';
 export { default as CandidateProfile } from './CandidateProfile';
 export { default as User } from './User';
 export { default as Job } from './Job';
+export { default as Company } from './Company';

@@ -1,183 +1,206 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { validationResult } from 'express-validator';
 import CandidateProfile from '../models/CandidateProfile';
-import path from 'path';
-import fs from 'fs';
+import JobApplication from '../models/JobApplication';
+import Job from '../models/Job';
+import { AuthRequest } from '../types';
 
-export const createCandidate = async (req: Request, res: Response): Promise<void> => {
+// Get candidate profile
+export const getCandidateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { sendCandidateWelcomeEmail } = require('../services/emailService');
-    
-    console.log('Creating candidate with data:', req.body);
-    const candidate = new CandidateProfile(req.body);
-    const savedCandidate = await candidate.save();
-    console.log('Candidate saved successfully:', savedCandidate._id);
-    
-    // Send welcome email to candidate
-    try {
-      await sendCandidateWelcomeEmail(
-        savedCandidate.email || req.body.email,
-        savedCandidate.fullName || req.body.fullName || 'Candidate'
-      );
-      console.log('Welcome email sent to candidate');
-    } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError);
+    const user = req.user;
+    if (!user || user.role !== 'candidate') {
+      res.status(403).json({
+        success: false,
+        message: 'Access denied. Candidates only.'
+      });
+      return;
     }
-    
-    res.status(201).json({ success: true, data: { candidate: savedCandidate } });
-  } catch (error) {
-    console.error('Error creating candidate:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: (error as Error).message });
-  }
-};
 
-export const getAllCandidates = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const skip = (page - 1) * limit;
-
-    const candidates = await CandidateProfile.find({})
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await CandidateProfile.countDocuments({});
+    const profile = await CandidateProfile.findOne({ userId: user._id });
+    if (!profile) {
+      res.status(404).json({
+        success: false,
+        message: 'Candidate profile not found'
+      });
+      return;
+    }
 
     res.json({
       success: true,
       data: {
-        candidates,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit)
-        }
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+          phone: user.phone
+        },
+        profile
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Get candidate profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 };
 
-export const getCandidateById = async (req: Request, res: Response): Promise<void> => {
+// Update candidate profile
+export const updateCandidateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const candidate = await CandidateProfile.findById(req.params.id);
-    if (!candidate) {
-      res.status(404).json({ success: false, message: 'Candidate not found' });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({
+        success: false,
+        errors: errors.array().map(err => err.msg)
+      });
       return;
     }
-    res.json({ success: true, data: { candidate } });
+
+    const user = req.user;
+    if (!user || user.role !== 'candidate') {
+      res.status(403).json({
+        success: false,
+        message: 'Access denied. Candidates only.'
+      });
+      return;
+    }
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const updateData = { ...req.body };
+
+    // Handle file uploads
+    if (files?.profilePhoto?.[0]) {
+      updateData.profilePhoto = `/uploads/${files.profilePhoto[0].filename}`;
+    }
+    if (files?.resume?.[0]) {
+      updateData.resumeUrl = `/uploads/${files.resume[0].filename}`;
+    }
+    if (files?.coverLetter?.[0]) {
+      updateData.coverLetterUrl = `/uploads/${files.coverLetter[0].filename}`;
+    }
+    if (files?.certificates) {
+      updateData.certificatesUrls = files.certificates.map(file => `/uploads/${file.filename}`);
+    }
+
+    // Convert string values to appropriate types
+    if (updateData.salaryExpectation) {
+      updateData.salaryExpectation = Number(updateData.salaryExpectation);
+    }
+    if (updateData.availableFrom) {
+      updateData.availableFrom = new Date(updateData.availableFrom);
+    }
+    if (updateData.isOpenToWork !== undefined) {
+      updateData.isOpenToWork = updateData.isOpenToWork === 'true' || updateData.isOpenToWork === true;
+    }
+
+    const profile = await CandidateProfile.findOneAndUpdate(
+      { userId: user._id },
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!profile) {
+      res.status(404).json({
+        success: false,
+        message: 'Candidate profile not found'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: { profile }
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Update candidate profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 };
 
-export const updateCandidate = async (req: Request, res: Response): Promise<void> => {
+// Upload resume
+export const uploadResume = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const candidate = await CandidateProfile.findByIdAndUpdate(
-      req.params.id,
-      req.body,
+    const user = req.user;
+    if (!user || user.role !== 'candidate') {
+      res.status(403).json({
+        success: false,
+        message: 'Access denied. Candidates only.'
+      });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json({
+        success: false,
+        message: 'No resume file provided'
+      });
+      return;
+    }
+
+    const profile = await CandidateProfile.findOneAndUpdate(
+      { userId: user._id },
+      { resumeUrl: `/uploads/${req.file.filename}` },
       { new: true }
     );
-    
-    if (!candidate) {
-      res.status(404).json({ success: false, message: 'Candidate not found' });
+
+    if (!profile) {
+      res.status(404).json({
+        success: false,
+        message: 'Candidate profile not found'
+      });
       return;
     }
 
-    res.json({ success: true, data: { candidate } });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-};
-
-export const deleteCandidate = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const candidate = await CandidateProfile.findByIdAndDelete(req.params.id);
-    if (!candidate) {
-      res.status(404).json({ success: false, message: 'Candidate not found' });
-      return;
-    }
-    res.json({ success: true, message: 'Candidate deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-};
-
-export const createApplication = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const JobApplication = require('../models/JobApplication').default;
-    const Job = require('../models/Job').default;
-    const { sendJobApplicationNotification, sendApplicationConfirmation } = require('../services/emailService');
-    
-    console.log('Creating application with data:', req.body);
-    
-    let resumeUrl = '';
-    if (req.file) {
-      resumeUrl = `/uploads/${req.file.filename}`;
-    }
-
-    const applicationData = {
-      ...req.body,
-      resumeUrl
-    };
-
-    const application = new JobApplication(applicationData);
-    const savedApplication = await application.save();
-    console.log('Application saved successfully:', savedApplication._id);
-    
-    // Get job details for email notifications
-    const job = await Job.findById(req.body.jobId);
-    if (job) {
-      console.log('Job found for email notifications:', job.title);
-      const companyEmail = job.company?.contact?.email;
-      
-      try {
-        // Send notifications
-        await sendJobApplicationNotification(
-          req.body.fullName,
-          req.body.email,
-          job.title,
-          job.company?.name || 'Unknown Company',
-          resumeUrl,
-          companyEmail
-        );
-        
-        await sendApplicationConfirmation(
-          req.body.email,
-          req.body.fullName,
-          job.title,
-          job.company?.name || 'Unknown Company'
-        );
-        console.log('Email notifications queued successfully');
-      } catch (emailError) {
-        console.error('Failed to queue email notifications:', emailError);
+    res.json({
+      success: true,
+      message: 'Resume uploaded successfully',
+      data: {
+        resumeUrl: `/uploads/${req.file.filename}`,
+        profile
       }
-    } else {
-      console.log('Job not found for email notifications');
-    }
-    
-    res.status(201).json({ success: true, data: { application: savedApplication } });
+    });
   } catch (error) {
-    console.error('Error creating application:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Upload resume error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 };
 
-export const getAllApplications = async (req: Request, res: Response): Promise<void> => {
+// Get candidate applications
+export const getCandidateApplications = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const JobApplication = require('../models/JobApplication').default;
+    const user = req.user;
+    if (!user || user.role !== 'candidate') {
+      res.status(403).json({
+        success: false,
+        message: 'Access denied. Candidates only.'
+      });
+      return;
+    }
+
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
-    const applications = await JobApplication.find({})
+    const applications = await JobApplication.find({ candidateId: user._id })
+      .populate('jobId', 'title company location jobType workType salaryRange')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await JobApplication.countDocuments({});
+    const total = await JobApplication.countDocuments({ candidateId: user._id });
 
     res.json({
       success: true,
@@ -187,48 +210,121 @@ export const getAllApplications = async (req: Request, res: Response): Promise<v
           page,
           limit,
           total,
-          totalPages: Math.ceil(total / limit)
+          pages: Math.ceil(total / limit)
         }
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Get candidate applications error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 };
 
-export const getApplicationById = async (req: Request, res: Response): Promise<void> => {
+// Get saved jobs
+export const getSavedJobs = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const JobApplication = require('../models/JobApplication').default;
-    const application = await JobApplication.findById(req.params.id);
-    if (!application) {
-      res.status(404).json({ success: false, message: 'Application not found' });
+    const user = req.user;
+    if (!user || user.role !== 'candidate') {
+      res.status(403).json({
+        success: false,
+        message: 'Access denied. Candidates only.'
+      });
       return;
     }
-    res.json({ success: true, data: { application } });
+
+    // Temporary response - SavedJob functionality to be implemented
+    res.json({
+      success: true,
+      data: {
+        savedJobs: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          pages: 0
+        }
+      }
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Get saved jobs error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 };
 
-export const getApplicationsByCandidate = async (req: Request, res: Response): Promise<void> => {
+// Save job
+export const saveJob = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const JobApplication = require('../models/JobApplication').default;
-    const applications = await JobApplication.find({ candidateId: req.params.candidateId })
-      .sort({ createdAt: -1 });
-    res.json({ success: true, data: { applications } });
+    const user = req.user;
+    if (!user || user.role !== 'candidate') {
+      res.status(403).json({
+        success: false,
+        message: 'Access denied. Candidates only.'
+      });
+      return;
+    }
+
+    const { jobId } = req.body;
+    if (!jobId) {
+      res.status(400).json({
+        success: false,
+        message: 'Job ID is required'
+      });
+      return;
+    }
+
+    // Check if job exists
+    const job = await Job.findById(jobId);
+    if (!job) {
+      res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+      return;
+    }
+
+    // Temporary response - SavedJob functionality to be implemented
+    res.status(201).json({
+      success: true,
+      message: 'Job saved successfully (placeholder)',
+      data: { savedJob: { jobId, candidateId: user._id } }
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Save job error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 };
 
-export const getApplicationsByJob = async (req: Request, res: Response): Promise<void> => {
+// Remove saved job
+export const removeSavedJob = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const JobApplication = require('../models/JobApplication').default;
-    const applications = await JobApplication.find({ jobId: req.params.jobId })
-      .sort({ createdAt: -1 });
-    res.json({ success: true, data: { applications } });
+    const user = req.user;
+    if (!user || user.role !== 'candidate') {
+      res.status(403).json({
+        success: false,
+        message: 'Access denied. Candidates only.'
+      });
+      return;
+    }
+
+    // Temporary response - SavedJob functionality to be implemented
+    res.json({
+      success: true,
+      message: 'Saved job removed successfully (placeholder)'
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Remove saved job error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 };
-

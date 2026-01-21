@@ -107,3 +107,61 @@ export const markdownUpload = multer({
     fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
+
+// Registration upload configuration (handles multiple file types)
+const registrationFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const imageTypes = ['.jpg', '.jpeg', '.png', '.svg'];
+  const documentTypes = ['.pdf', '.doc', '.docx'];
+  const fileExt = path.extname(file.originalname).toLowerCase();
+  
+  if (['profilePhoto', 'logo'].includes(file.fieldname) && imageTypes.includes(fileExt)) {
+    cb(null, true);
+  } else if (['resume', 'coverLetter', 'certificates'].includes(file.fieldname) && documentTypes.includes(fileExt)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`Invalid file type for ${file.fieldname}. Images (JPG, PNG, SVG) for profilePhoto/logo, PDF/DOC/DOCX for documents`));
+  }
+};
+
+export const registrationUpload = multer({
+  storage: storage,
+  fileFilter: registrationFileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
+// Middleware to parse nested form data
+export const parseNestedFormData = (req: any, res: any, next: any) => {
+  if (req.body) {
+    // Parse company nested fields
+    const company: any = {};
+    const candidate: any = {};
+    
+    Object.keys(req.body).forEach(key => {
+      if (key.startsWith('company.')) {
+        const nestedKey = key.replace('company.', '');
+        if (nestedKey.includes('.')) {
+          const [parentKey, childKey] = nestedKey.split('.');
+          if (!company[parentKey]) company[parentKey] = {};
+          company[parentKey][childKey] = req.body[key];
+        } else {
+          company[nestedKey] = req.body[key];
+        }
+        delete req.body[key];
+      } else if (key.startsWith('candidate.')) {
+        const nestedKey = key.replace('candidate.', '');
+        candidate[nestedKey] = req.body[key];
+        delete req.body[key];
+      }
+    });
+    
+    if (Object.keys(company).length > 0) {
+      req.body.company = company;
+    }
+    if (Object.keys(candidate).length > 0) {
+      req.body.candidate = candidate;
+    }
+  }
+  next();
+};

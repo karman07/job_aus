@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { AuthRequest } from '../types';
+import { verifyAccessToken } from '../utils/jwt';
 
 export const authenticateToken = async (
   req: AuthRequest,
@@ -18,18 +19,12 @@ export const authenticateToken = async (
     }
 
     // Verify JWT token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as any;
+    const decoded = verifyAccessToken(token) as any;
     
     // Find user by ID from token
     const user = await User.findById(decoded.userId);
     if (!user) {
       res.status(401).json({ success: false, message: 'User not found' });
-      return;
-    }
-
-    // Check if user is admin for admin routes
-    if (req.path.includes('/admin') && user.role !== 'admin') {
-      res.status(403).json({ success: false, message: 'Admin access required' });
       return;
     }
 
@@ -45,3 +40,29 @@ export const authenticateToken = async (
     }
   }
 };
+
+// Role-based middleware
+export const requireRole = (roles: string[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'Authentication required' });
+      return;
+    }
+
+    if (!roles.includes(req.user.role)) {
+      res.status(403).json({ 
+        success: false, 
+        message: `Access denied. Required role: ${roles.join(' or ')}` 
+      });
+      return;
+    }
+
+    next();
+  };
+};
+
+// Specific role middlewares
+export const requireCandidate = requireRole(['candidate']);
+export const requireEmployer = requireRole(['employer']);
+export const requireAdmin = requireRole(['admin']);
+export const requireCandidateOrEmployer = requireRole(['candidate', 'employer']);

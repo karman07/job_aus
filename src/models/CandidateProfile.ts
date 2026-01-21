@@ -1,12 +1,15 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ICandidateProfile extends Document {
+  userId: string;
   // Personal Details
   fullName: string;
   email: string;
   phone: string;
   location: string;
+  state: 'NSW' | 'VIC' | 'QLD' | 'WA' | 'SA' | 'TAS' | 'ACT' | 'NT';
   preferredRole?: string;
+  profilePhoto?: string;
   
   // Experience
   currentRole: string;
@@ -23,6 +26,8 @@ export interface ICandidateProfile extends Document {
   resumeUrl?: string;
   portfolioUrl?: string;
   linkedinUrl?: string;
+  coverLetterUrl?: string;
+  certificatesUrls?: string[];
   isOpenToWork: boolean;
   profileViews: number;
   createdAt: Date;
@@ -30,6 +35,12 @@ export interface ICandidateProfile extends Document {
 }
 
 const candidateProfileSchema = new Schema<ICandidateProfile>({
+  userId: {
+    type: String,
+    ref: 'User',
+    required: true,
+    unique: true
+  },
   // Personal Details
   fullName: {
     type: String,
@@ -48,9 +59,16 @@ const candidateProfileSchema = new Schema<ICandidateProfile>({
     type: String,
     trim: true
   },
+  state: {
+    type: String,
+    enum: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT']
+  },
   preferredRole: {
     type: String,
     trim: true
+  },
+  profilePhoto: {
+    type: String
   },
   
   // Experience
@@ -98,6 +116,12 @@ const candidateProfileSchema = new Schema<ICandidateProfile>({
   linkedinUrl: {
     type: String
   },
+  coverLetterUrl: {
+    type: String
+  },
+  certificatesUrls: [{
+    type: String
+  }],
   isOpenToWork: {
     type: Boolean,
     default: true

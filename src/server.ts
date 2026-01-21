@@ -13,6 +13,7 @@ import dataRoutes from './routes/data';
 import uploadRoutes from './routes/upload';
 import applicationRoutes from './routes/applications';
 import adminRoutes from './routes/admin';
+import companyRoutes from './routes/companies';
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use('/api/data', dataRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/companies', companyRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
