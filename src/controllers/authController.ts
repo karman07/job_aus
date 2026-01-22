@@ -253,6 +253,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     
     // Handle MongoDB duplicate key errors
     if (error.code === 11000) {
+      console.log('🔍 Duplicate key error details:', {
+        message: error.message,
+        keyPattern: error.keyPattern,
+        keyValue: error.keyValue
+      });
+      
       const field = Object.keys(error.keyPattern || {})[0] || 'field';
       let message = 'This record already exists';
       
@@ -260,6 +266,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         message = 'User already exists with this email address';
       } else if (field === 'userId') {
         message = 'Profile already exists for this user';
+      } else if (field === 'username') {
+        message = 'User already exists with this email address'; // Treat username as email
       }
       
       res.status(400).json({
