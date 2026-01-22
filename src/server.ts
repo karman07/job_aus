@@ -14,6 +14,7 @@ import uploadRoutes from './routes/upload';
 import applicationRoutes from './routes/applications';
 import adminRoutes from './routes/admin';
 import companyRoutes from './routes/companies';
+import { requestTimer, logSlowRequests } from './middleware/performance';
 
 dotenv.config();
 
@@ -21,8 +22,21 @@ const app = express();
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin: '*', credentials: true }));
+
+// Add performance monitoring middleware
+if (process.env.NODE_ENV === 'development') {
+  app.use(requestTimer);
+  app.use(logSlowRequests(2000)); // Log requests taking more than 2 seconds
+}
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Add compression middleware for better performance
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  next();
+});
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -65,7 +79,13 @@ app.use('*', (req, res) => {
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI!);
+    const mongooseOptions = {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000
+    };
+    
+    await mongoose.connect(process.env.MONGODB_URI!, mongooseOptions);
     console.log('MongoDB connected');
   } catch (error) {
     console.error('MongoDB error:', error);

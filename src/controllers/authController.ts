@@ -7,6 +7,7 @@ import { generateTokens, verifyRefreshToken, generateEmailVerificationToken } fr
 import { AuthRequest } from '../types';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
+  const startTime = Date.now();
   try {
     console.log('🔍 Registration request received:', {
       body: req.body,
@@ -29,13 +30,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     console.log('📝 Parsed data:', { email, firstName, lastName, role, phone, company: !!company, candidate: !!candidate });
 
-    // Check if user exists
-    const existingUser = await User.findOne({ email });
+    // Early email validation and existence check (with lean query for better performance)
+    const existingUser = await User.findOne({ email }).lean().select('_id');
     if (existingUser) {
       console.log('❌ User already exists:', email);
       res.status(400).json({
         success: false,
-        message: 'User already exists with this email'
+        message: 'User already exists with this email address'
       });
       return;
     }
@@ -99,96 +100,117 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       emailVerificationToken
     });
 
+    // Save user first
     await user.save();
     console.log('✅ User created:', user._id);
 
     // Generate tokens
     const { accessToken, refreshToken } = generateTokens(user._id.toString());
     
-    // Save refresh token
-    user.refreshToken = refreshToken;
-    await user.save();
-
     let profileData = null;
 
-    // Create profile based on role
-    if (role === 'candidate') {
-      console.log('👨💼 Creating candidate profile...');
-      // Handle file uploads for candidate
-      const profilePhoto = files?.profilePhoto?.[0] ? `/uploads/${files.profilePhoto[0].filename}` : '';
-      const resumeUrl = files?.resume?.[0] ? `/uploads/${files.resume[0].filename}` : '';
-      const coverLetterUrl = files?.coverLetter?.[0] ? `/uploads/${files.coverLetter[0].filename}` : '';
-      const certificatesUrls = files?.certificates?.map(file => `/uploads/${file.filename}`) || [];
+    try {
+      // Create profile based on role (in parallel with token update)
+      const profilePromise = (async () => {
+        if (role === 'candidate') {
+          console.log('👨💼 Creating candidate profile...');
+          // Handle file uploads for candidate
+          const profilePhoto = files?.profilePhoto?.[0] ? `/uploads/${files.profilePhoto[0].filename}` : '';
+          const resumeUrl = files?.resume?.[0] ? `/uploads/${files.resume[0].filename}` : '';
+          const coverLetterUrl = files?.coverLetter?.[0] ? `/uploads/${files.coverLetter[0].filename}` : '';
+          const certificatesUrls = files?.certificates?.map(file => `/uploads/${file.filename}`) || [];
 
-      const candidateProfile = new CandidateProfile({
-        userId: user._id,
-        fullName: candidate?.fullName || `${firstName} ${lastName}`,
-        email,
-        phone,
-        location: candidate?.location || '',
-        state: candidate?.state,
-        preferredRole: candidate?.preferredRole || '',
-        profilePhoto: profilePhoto,
-        currentRole: candidate?.currentRole || '',
-        currentCompany: candidate?.currentCompany || '',
-        yearsExperience: candidate?.yearsExperience || '0-1',
-        skills: candidate?.skills || '',
-        education: candidate?.education || '',
-        preferredIndustries: Array.isArray(candidate?.preferredIndustries) 
-          ? candidate.preferredIndustries 
-          : (candidate?.preferredIndustries ? [candidate.preferredIndustries] : []),
-        salaryExpectation: candidate?.salaryExpectation ? Number(candidate.salaryExpectation) : null,
-        availableFrom: candidate?.availableFrom ? new Date(candidate.availableFrom) : null,
-        visaStatus: candidate?.visaStatus || 'citizen',
-        resumeUrl: resumeUrl,
-        portfolioUrl: candidate?.portfolioUrl || '',
-        linkedinUrl: candidate?.linkedinUrl || '',
-        coverLetterUrl: coverLetterUrl,
-        certificatesUrls: certificatesUrls,
-        isOpenToWork: candidate?.isOpenToWork === 'true' || candidate?.isOpenToWork === true
-      });
-      await candidateProfile.save();
-      profileData = candidateProfile;
-      console.log('✅ Candidate profile created');
-    } else if (role === 'employer') {
-      console.log('🏢 Creating company profile...');
-      // Handle logo upload for employer
-      const logoUrl = files?.logo?.[0] ? `/uploads/${files.logo[0].filename}` : '';
+          const candidateProfile = new CandidateProfile({
+            userId: user._id,
+            fullName: candidate?.fullName || `${firstName} ${lastName}`,
+            email,
+            phone,
+            location: candidate?.location || '',
+            state: candidate?.state,
+            preferredRole: candidate?.preferredRole || '',
+            profilePhoto: profilePhoto,
+            currentRole: candidate?.currentRole || '',
+            currentCompany: candidate?.currentCompany || '',
+            yearsExperience: candidate?.yearsExperience || '0-1',
+            skills: candidate?.skills || '',
+            education: candidate?.education || '',
+            preferredIndustries: Array.isArray(candidate?.preferredIndustries) 
+              ? candidate.preferredIndustries 
+              : (candidate?.preferredIndustries ? [candidate.preferredIndustries] : []),
+            salaryExpectation: candidate?.salaryExpectation ? Number(candidate.salaryExpectation) : null,
+            availableFrom: candidate?.availableFrom ? new Date(candidate.availableFrom) : null,
+            visaStatus: candidate?.visaStatus || 'citizen',
+            resumeUrl: resumeUrl,
+            portfolioUrl: candidate?.portfolioUrl || '',
+            linkedinUrl: candidate?.linkedinUrl || '',
+            coverLetterUrl: coverLetterUrl,
+            certificatesUrls: certificatesUrls,
+            isOpenToWork: candidate?.isOpenToWork === 'true' || candidate?.isOpenToWork === true
+          });
+          await candidateProfile.save();
+          console.log('✅ Candidate profile created');
+          return candidateProfile;
+        } else if (role === 'employer') {
+          console.log('🏢 Creating company profile...');
+          // Handle logo upload for employer
+          const logoUrl = files?.logo?.[0] ? `/uploads/${files.logo[0].filename}` : '';
 
-      const companyData = {
-        userId: user._id,
-        name: company.name,
-        description: company.description || '',
-        website: company.website || '',
-        logo: logoUrl,
-        size: company.size || '',
-        founded: company.founded ? Number(company.founded) : null,
-        industry: Array.isArray(company.industry) ? company.industry : [company.industry],
-        location: company.location,
-        state: company.state,
-        contact: {
-          email: company.contact.email,
-          phone: company.contact.phone || phone || ''
-        },
-        isVerified: false
-      };
-      
-      console.log('🏢 Company data to save:', companyData);
-      
-      // Create complete company profile with all provided data
-      const companyProfile = new Company(companyData);
-      await companyProfile.save();
-      profileData = companyProfile;
-      
-      console.log(`✅ Company profile created for employer ${user._id}:`, {
-        name: companyProfile.name,
-        location: companyProfile.location,
-        state: companyProfile.state,
-        industry: companyProfile.industry
-      });
+          const companyData = {
+            userId: user._id,
+            name: company.name,
+            description: company.description || '',
+            website: company.website || '',
+            logo: logoUrl,
+            size: company.size || '',
+            founded: company.founded ? Number(company.founded) : null,
+            industry: Array.isArray(company.industry) ? company.industry : [company.industry],
+            location: company.location,
+            state: company.state,
+            contact: {
+              email: company.contact.email,
+              phone: company.contact.phone || phone || ''
+            },
+            isVerified: false
+          };
+          
+          console.log('🏢 Company data to save:', companyData);
+          
+          // Create complete company profile with all provided data
+          const companyProfile = new Company(companyData);
+          await companyProfile.save();
+          
+          console.log(`✅ Company profile created for employer ${user._id}:`, {
+            name: companyProfile.name,
+            location: companyProfile.location,
+            state: companyProfile.state,
+            industry: companyProfile.industry
+          });
+          return companyProfile;
+        }
+        return null;
+      })();
+
+      // Update user with refresh token in parallel
+      const tokenUpdatePromise = (async () => {
+        user.refreshToken = refreshToken;
+        await user.save();
+      })();
+
+      // Wait for both operations to complete
+      const [profile] = await Promise.all([profilePromise, tokenUpdatePromise]);
+      profileData = profile;
+
+    } catch (profileError: any) {
+      // If profile creation fails, clean up the user
+      console.error('💥 Profile creation failed, cleaning up user:', profileError.message);
+      await User.findByIdAndDelete(user._id);
+      throw profileError;
     }
 
     console.log('🎉 Registration successful');
+    const totalTime = Date.now() - startTime;
+    console.log(`⏱️ Total registration time: ${totalTime}ms`);
+    
     res.status(201).json({
       success: true,
       message: 'Registration successful',
@@ -232,9 +254,17 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     // Handle MongoDB duplicate key errors
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern || {})[0] || 'field';
+      let message = 'This record already exists';
+      
+      if (field === 'email') {
+        message = 'User already exists with this email address';
+      } else if (field === 'userId') {
+        message = 'Profile already exists for this user';
+      }
+      
       res.status(400).json({
         success: false,
-        message: `${field} already exists`,
+        message: message,
         error: `Duplicate ${field}`
       });
       return;
