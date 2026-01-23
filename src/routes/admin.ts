@@ -16,6 +16,9 @@ import {
   getAllCandidates,
   updateCandidate,
   deleteCandidate,
+  getAllJobs,
+  updateJob,
+  deleteJob,
   getAllApplications,
   updateApplicationStatus,
   deleteApplication,
@@ -112,7 +115,7 @@ router.post('/create', async (req, res) => {
 });
 
 // Get All Admins
-router.get('/', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/admins', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const admins = await User.find({ role: 'admin' }).select('-password');
     return res.json({ success: true, data: { admins } });
@@ -126,6 +129,11 @@ router.get('/users', authenticateToken, requireAdmin, getAllUsers);
 router.get('/users/:id', authenticateToken, requireAdmin, getUserById);
 router.put('/users/:id', authenticateToken, requireAdmin, updateUser);
 router.delete('/users/:id', authenticateToken, requireAdmin, deleteUser);
+
+// Job Management Routes
+router.get('/jobs', authenticateToken, requireAdmin, getAllJobs);
+router.put('/jobs/:id', authenticateToken, requireAdmin, updateJob);
+router.delete('/jobs/:id', authenticateToken, requireAdmin, deleteJob);
 
 // Company Management Routes
 router.get('/companies', authenticateToken, requireAdmin, getAllCompanies);

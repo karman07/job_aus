@@ -218,6 +218,86 @@ export const deleteCompany = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+// Job Management
+export const getAllJobs = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+    const status = req.query.status as string;
+
+    const filter = status ? { status } : {};
+
+    const jobs = await Job.find(filter)
+      .populate('postedBy', 'firstName lastName email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Job.countDocuments(filter);
+
+    res.json({
+      success: true,
+      data: {
+        jobs,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const updateJob = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const job = await Job.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    if (!job) {
+      res.status(404).json({ success: false, message: 'Job not found' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Job updated successfully',
+      data: { job }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const deleteJob = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const job = await Job.findByIdAndDelete(req.params.id);
+    
+    if (!job) {
+      res.status(404).json({ success: false, message: 'Job not found' });
+      return;
+    }
+
+    // Delete related applications and saved jobs
+    await JobApplication.deleteMany({ jobId: job._id });
+    await SavedJob.deleteMany({ jobId: job._id });
+
+    res.json({
+      success: true,
+      message: 'Job and related data deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 // Candidate Management
 export const getAllCandidates = async (req: Request, res: Response): Promise<void> => {
   try {
