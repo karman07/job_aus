@@ -86,7 +86,7 @@ export function ApplicationsManagement({ onDataUpdate }: ApplicationsManagementP
   const startIndex = (currentPage - 1) * itemsPerPage
   const paginatedApplications = filteredApplications.slice(startIndex, startIndex + itemsPerPage)
   const totalFilteredPages = Math.ceil(filteredApplications.length / itemsPerPage)
-
+//
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       'Pending': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
