@@ -8,12 +8,13 @@ import { JobsManagement } from '../../components/dashboard/jobs-management'
 import { ApplicationsManagement } from '../../components/dashboard/applications-management'
 import { UsersManagement } from '../../components/dashboard/users-management'
 import { AdminManagement } from '../../components/dashboard/admin-management'
-import { DataManagement } from '../../components/dashboard/data-management'
+import { CompanyManagement } from '../../components/dashboard/company-management'
 
 interface AnalyticsData {
   jobs: any[]
   applications: any[]
   candidates: any[]
+  companies: any[]
   admins: any[]
   lastUpdated: number
 }
@@ -25,6 +26,7 @@ export default function DashboardPage() {
     jobs: [],
     applications: [],
     candidates: [],
+    companies: [],
     admins: [],
     lastUpdated: 0
   })
@@ -41,12 +43,56 @@ export default function DashboardPage() {
     
     try {
       setUser(JSON.parse(userData))
+      // Load all analytics data on login
+      loadAllAnalyticsData()
     } catch (error) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       router.push('/login')
     }
   }, [router])
+
+  const loadAllAnalyticsData = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    try {
+      const [jobsRes, applicationsRes, candidatesRes, companiesRes, adminsRes] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/jobs`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/applications`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/candidates`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/companies`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/admins`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ])
+
+      const jobs = jobsRes.ok ? await jobsRes.json() : { data: [] }
+      const applications = applicationsRes.ok ? await applicationsRes.json() : { data: [] }
+      const candidates = candidatesRes.ok ? await candidatesRes.json() : { data: [] }
+      const companies = companiesRes.ok ? await companiesRes.json() : { data: [] }
+      const admins = adminsRes.ok ? await adminsRes.json() : { data: [] }
+
+      setAnalyticsData({
+        jobs: Array.isArray(jobs.data) ? jobs.data : [],
+        applications: Array.isArray(applications.data) ? applications.data : [],
+        candidates: Array.isArray(candidates.data) ? candidates.data : [],
+        companies: Array.isArray(companies.data) ? companies.data : [],
+        admins: Array.isArray(admins.data) ? admins.data : [],
+        lastUpdated: Date.now()
+      })
+    } catch (error) {
+      console.error('Error loading analytics data:', error)
+    }
+  }
 
   const updateAnalyticsData = (type: keyof Omit<AnalyticsData, 'lastUpdated'>, data: any[]) => {
     setAnalyticsData(prev => ({
@@ -66,10 +112,10 @@ export default function DashboardPage() {
         return <ApplicationsManagement onDataUpdate={(data) => updateAnalyticsData('applications', data)} />
       case 'users':
         return <UsersManagement onDataUpdate={(data) => updateAnalyticsData('candidates', data)} />
+      case 'companies':
+        return <CompanyManagement onDataUpdate={(data) => updateAnalyticsData('companies', data)} />
       case 'admins':
         return <AdminManagement onDataUpdate={(data) => updateAnalyticsData('admins', data)} />
-      case 'data':
-        return <DataManagement />
       default:
         return <DashboardOverview analyticsData={analyticsData} />
     }

@@ -11,7 +11,7 @@ import {
   LogOut,
   Menu,
   X,
-  Database
+  Building
 } from 'lucide-react'
 import { ThemeToggle } from '../theme-toggle'
 
@@ -29,8 +29,8 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     { id: 'jobs', label: 'Jobs', icon: Briefcase },
     { id: 'applications', label: 'Applications', icon: FileText },
     { id: 'users', label: 'Candidates', icon: Users },
-    { id: 'admins', label: 'Admins', icon: Settings },
-   
+    { id: 'companies', label: 'Companies', icon: Building },
+    { id: 'admins', label: 'Admins', icon: Settings }
   ]
 
   const handleLogout = () => {

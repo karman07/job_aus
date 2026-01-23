@@ -3,27 +3,18 @@
 import { useState, useEffect } from 'react'
 import { Eye, Search, FileText } from 'lucide-react'
 import { Pagination } from '../pagination'
-import { FileViewer } from '../pdf-viewer'
 
 interface Application {
   _id: string
-  candidateId: string
-  jobId: string
   fullName: string
   email: string
   phone: string
-  location: string
-  preferredRole: string
   currentRole: string
   currentCompany: string
   yearsExperience: string
-  skills: string
-  education: string
   resumeUrl: string
   status: string
   appliedAt: string
-  createdAt: string
-  updatedAt: string
 }
 
 interface ApplicationsManagementProps {
@@ -40,62 +31,71 @@ export function ApplicationsManagement({ onDataUpdate }: ApplicationsManagementP
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const itemsPerPage = 10
-  const [showPDFViewer, setShowPDFViewer] = useState(false)
-  const [pdfUrl, setPdfUrl] = useState('')
-  const [pdfApplicantName, setPdfApplicantName] = useState('')
 
   useEffect(() => {
     fetchApplications()
-  }, [currentPage])
+  }, [])
 
   const fetchApplications = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/applications?page=${currentPage}&limit=${itemsPerPage}`)
+      const token = localStorage.getItem('token')
+      if (!token) {
+        console.error('No token found')
+        setApplications([])
+        return
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/applications`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (response.status === 401) {
+        console.error('Token expired or invalid')
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+        return
+      }
+      
       if (response.ok) {
         const data = await response.json()
-        const applicationsData = data.data?.applications || []
+        const applicationsData = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : []
         setApplications(applicationsData)
-        setTotalPages(data.data?.pagination?.totalPages || 1)
+        setTotalPages(Math.ceil(applicationsData.length / itemsPerPage))
         onDataUpdate?.(applicationsData)
       }
     } catch (error) {
       console.error('Error fetching applications:', error)
+      setApplications([])
     } finally {
       setLoading(false)
     }
   }
 
-  const handleViewResume = (resumePath: string, applicantName: string) => {
-    setPdfUrl(resumePath)
-    setPdfApplicantName(applicantName)
-    setShowPDFViewer(true)
-  }
-
-  const filteredApplications = applications.filter(app => {
+  const filteredApplications = Array.isArray(applications) ? applications.filter(app => {
     const matchesSearch = 
-      app.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.email.toLowerCase().includes(searchTerm.toLowerCase())
-    
+      app.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.email?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter
-    
     return matchesSearch && matchesStatus
-  })
+  }) : []
+
+  // Client-side pagination
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedApplications = filteredApplications.slice(startIndex, startIndex + itemsPerPage)
+  const totalFilteredPages = Math.ceil(filteredApplications.length / itemsPerPage)
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Pending':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-      case 'Hired':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-      case 'Rejected':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-      case 'Reviewed':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-      case 'Interview':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+    const colors = {
+      'Pending': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      'Hired': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      'Rejected': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      'Reviewed': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      'Interview': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
     }
+    return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
   }
 
   return (
@@ -162,12 +162,12 @@ export function ApplicationsManagement({ onDataUpdate }: ApplicationsManagementP
                 <tr>
                   <td colSpan={5} className="px-6 py-4 text-center text-gray-500">Loading...</td>
                 </tr>
-              ) : filteredApplications.length === 0 ? (
+              ) : paginatedApplications.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No applications found</td>
                 </tr>
               ) : (
-                filteredApplications.map((application) => (
+                paginatedApplications.map((application) => (
                   <tr key={application._id}>
                     <td className="px-6 py-4">
                       <div>
@@ -205,13 +205,17 @@ export function ApplicationsManagement({ onDataUpdate }: ApplicationsManagementP
                         >
                           <Eye className="h-4 w-4" />
                         </button>
-                        <button
-                          onClick={() => handleViewResume(application.resumeUrl, application.fullName)}
-                          className="text-purple-600 hover:text-purple-900 dark:text-purple-400"
-                          title="View Resume"
-                        >
-                          <FileText className="h-4 w-4" />
-                        </button>
+                        {application.resumeUrl && (
+                          <a
+                            href={application.resumeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-purple-600 hover:text-purple-900 dark:text-purple-400"
+                            title="View Resume"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </a>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -224,113 +228,73 @@ export function ApplicationsManagement({ onDataUpdate }: ApplicationsManagementP
 
       <Pagination
         currentPage={currentPage}
-        totalPages={totalPages}
+        totalPages={totalFilteredPages}
         onPageChange={setCurrentPage}
       />
 
-      {/* Application Details Modal */}
+      {/* Modal */}
       {showModal && selectedApplication && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Application Details
-                </h3>
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Application Details
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedApplication.fullName}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedApplication.email}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedApplication.phone}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Experience</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedApplication.yearsExperience}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Current Role</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedApplication.currentRole}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Company</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedApplication.currentCompany}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-6">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Close
+              </button>
+              {selectedApplication.resumeUrl && (
+                <a
+                  href={selectedApplication.resumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
                 >
-                  ×
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Applicant Info */}
-                <div>
-                  <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
-                    Applicant Information
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Name:</span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {selectedApplication.fullName}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Email:</span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {selectedApplication.email}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Phone:</span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {selectedApplication.phone}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Experience:</span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {selectedApplication.yearsExperience}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Skills */}
-                <div>
-                  <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
-                    Skills
-                  </h4>
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
-                    {selectedApplication.skills}
-                  </div>
-                </div>
-
-                {/* Education */}
-                <div>
-                  <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
-                    Education
-                  </h4>
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
-                      {selectedApplication.education || 'Not provided'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Resume */}
-                {selectedApplication.resumeUrl && (
-                  <div>
-                    <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
-                      Resume
-                    </h4>
-                    <div className="flex items-center space-x-4">
-                      <button
-                        onClick={() => handleViewResume(selectedApplication.resumeUrl, selectedApplication.fullName)}
-                        className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg transition-colors"
-                      >
-                        <FileText className="h-4 w-4" />
-                        <span>View Resume</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                  View Resume
+                </a>
+              )}
             </div>
           </div>
         </div>
-      )}
-
-      {showPDFViewer && (
-        <FileViewer
-          fileUrl={pdfUrl}
-          isOpen={showPDFViewer}
-          onClose={() => setShowPDFViewer(false)}
-          applicantName={pdfApplicantName}
-        />
       )}
     </div>
   )

@@ -2,30 +2,25 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Edit, Trash2, Search, Shield } from 'lucide-react'
-import { Pagination } from '../pagination'
 
 interface Admin {
   _id: string
   email: string
   firstName: string
   lastName: string
-  phone: string
+  phone?: string
+  role: 'admin'
+  isEmailVerified: boolean
   createdAt: string
+  updatedAt: string
 }
 
-interface AdminManagementProps {
-  onDataUpdate?: (data: Admin[]) => void
-}
-
-export function AdminManagement({ onDataUpdate }: AdminManagementProps) {
+export function AdminManagement() {
   const [admins, setAdmins] = useState<Admin[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingAdmin, setEditingAdmin] = useState<Admin | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const itemsPerPage = 10
   const [formData, setFormData] = useState({
     email: '',
     firstName: '',
@@ -41,62 +36,15 @@ export function AdminManagement({ onDataUpdate }: AdminManagementProps) {
   const fetchAdmins = async () => {
     try {
       const token = localStorage.getItem('token')
-      
-      if (!token) {
-        console.error('No token found in localStorage')
-        setAdmins([])
-        return
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setAdmins(data.data || [])
       }
-
-      console.log('Testing multiple endpoints with token:', token)
-      
-      // Test different possible endpoints
-      const endpoints = [
-        '/admin',
-        '/admin/',
-        '/users',
-        '/auth/verify'
-      ]
-      
-      for (const endpoint of endpoints) {
-        try {
-          console.log(`Testing endpoint: ${endpoint}`)
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}${endpoint}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          })
-          
-          console.log(`${endpoint} - Status:`, response.status)
-          
-          if (response.ok) {
-            const data = await response.json()
-            console.log(`${endpoint} - Success:`, data)
-            
-            // If this endpoint works, use its data
-            if (endpoint === '/admin' || endpoint === '/admin/') {
-              const adminsData = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : []
-              setAdmins(adminsData)
-              setTotalPages(Math.ceil(adminsData.length / itemsPerPage))
-              onDataUpdate?.(adminsData)
-              return
-            }
-          } else {
-            const errorText = await response.text()
-            console.log(`${endpoint} - Error:`, response.status, errorText)
-          }
-        } catch (e) {
-          console.log(`${endpoint} - Exception:`, e)
-        }
-      }
-      
-      // If no endpoint worked, set empty array
-      setAdmins([])
-      
     } catch (error) {
-      console.error('Error testing endpoints:', error)
-      setAdmins([])
+      console.error('Error fetching admins:', error)
     } finally {
       setLoading(false)
     }
@@ -105,36 +53,36 @@ export function AdminManagement({ onDataUpdate }: AdminManagementProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const token = localStorage.getItem('token')
-    console.log('Submit - Using fresh token:', token)
     
-    const adminData = {
-      email: formData.email,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      phone: formData.phone,
-      ...(formData.password && { password: formData.password })
-    }
-
     try {
-      const url = editingAdmin 
-        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/${editingAdmin._id}`
-        : `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/create`
-      
-      const response = await fetch(url, {
-        method: editingAdmin ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(adminData)
-      })
-
-      if (response.ok) {
-        fetchAdmins()
-        setShowModal(false)
-        resetForm()
+      if (editingAdmin) {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/${editingAdmin._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(formData)
+        })
+        if (response.ok) {
+          fetchAdmins()
+          setShowModal(false)
+          resetForm()
+        }
       } else {
-        console.error('Submit error:', response.status, await response.text())
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(formData)
+        })
+        if (response.ok) {
+          fetchAdmins()
+          setShowModal(false)
+          resetForm()
+        }
       }
     } catch (error) {
       console.error('Error saving admin:', error)
@@ -147,7 +95,7 @@ export function AdminManagement({ onDataUpdate }: AdminManagementProps) {
       email: admin.email,
       firstName: admin.firstName,
       lastName: admin.lastName,
-      phone: admin.phone,
+      phone: admin.phone || '',
       password: ''
     })
     setShowModal(true)
@@ -158,19 +106,12 @@ export function AdminManagement({ onDataUpdate }: AdminManagementProps) {
     
     try {
       const token = localStorage.getItem('token')
-      console.log('Delete - Using fresh token:', token)
-      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/${adminId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       })
-      
       if (response.ok) {
         fetchAdmins()
-      } else {
-        console.error('Delete error:', response.status, await response.text())
       }
     } catch (error) {
       console.error('Error deleting admin:', error)
@@ -188,27 +129,22 @@ export function AdminManagement({ onDataUpdate }: AdminManagementProps) {
     setEditingAdmin(null)
   }
 
-  const filteredAdmins = Array.isArray(admins) ? admins.filter(admin =>
-    admin.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    admin.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    admin.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) : []
-
-  // Client-side pagination
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedAdmins = filteredAdmins.slice(startIndex, startIndex + itemsPerPage)
-  const totalFilteredPages = Math.ceil(filteredAdmins.length / itemsPerPage)
+  const filteredAdmins = admins.filter(admin =>
+    admin.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    admin.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    admin.lastName.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Management</h2>
         <button
           onClick={() => {
             resetForm()
             setShowModal(true)
           }}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
           <span>Add Admin</span>
@@ -233,21 +169,11 @@ export function AdminManagement({ onDataUpdate }: AdminManagementProps) {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Admin
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Phone
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Admin</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Contact</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Created</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -255,30 +181,40 @@ export function AdminManagement({ onDataUpdate }: AdminManagementProps) {
                 <tr>
                   <td colSpan={5} className="px-6 py-4 text-center text-gray-500">Loading...</td>
                 </tr>
-              ) : paginatedAdmins.length === 0 ? (
+              ) : filteredAdmins.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No admins found</td>
                 </tr>
               ) : (
-                paginatedAdmins.map((admin) => (
+                filteredAdmins.map((admin) => (
                   <tr key={admin._id}>
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded-full mr-3">
-                          <Shield className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                        </div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {admin.firstName} {admin.lastName}
+                        <Shield className="h-8 w-8 text-red-600 mr-3" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {admin.firstName} {admin.lastName}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{admin.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                      {admin.email}
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900 dark:text-white">{admin.email}</div>
+                      {admin.phone && (
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{admin.phone}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        admin.isEmailVerified 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      }`}>
+                        {admin.isEmailVerified ? 'Verified' : 'Unverified'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                      {admin.phone}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                       {new Date(admin.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium space-x-2">
@@ -302,12 +238,6 @@ export function AdminManagement({ onDataUpdate }: AdminManagementProps) {
           </table>
         </div>
       </div>
-
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalFilteredPages}
-        onPageChange={setCurrentPage}
-      />
 
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -393,7 +323,7 @@ export function AdminManagement({ onDataUpdate }: AdminManagementProps) {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
                 >
                   {editingAdmin ? 'Update' : 'Create'}
                 </button>

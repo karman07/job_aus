@@ -102,20 +102,47 @@ export function JobsManagement({ onDataUpdate }: JobsManagementProps) {
   const fetchJobs = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs/admin/all?page=${currentPage}&limit=${itemsPerPage}`, {
+      console.log('Jobs - Token being used:', token)
+      
+      if (!token) {
+        console.error('No token found')
+        setJobs([])
+        return
+      }
+
+      // Try without pagination first to test the endpoint
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs/admin/all`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       })
+      
+      console.log('Jobs Response status:', response.status)
+      
+      if (response.status === 401) {
+        console.error('Jobs - Token expired or invalid - but keeping token for debugging')
+        const errorText = await response.text()
+        console.error('Jobs 401 Error details:', errorText)
+        setJobs([])
+        return
+      }
+      
       if (response.ok) {
         const data = await response.json()
-        const jobsData = data.data?.jobs || []
+        console.log('Jobs API Response:', data)
+        const jobsData = data.data?.jobs || data.jobs || []
         setJobs(jobsData)
-        setTotalPages(data.data?.pagination?.pages || 1)
+        setTotalPages(Math.ceil(jobsData.length / itemsPerPage))
         onDataUpdate?.(jobsData)
+      } else {
+        const errorText = await response.text()
+        console.error('Jobs API Error:', response.status, errorText)
+        setJobs([])
       }
     } catch (error) {
       console.error('Error fetching jobs:', error)
+      setJobs([])
     } finally {
       setLoading(false)
     }

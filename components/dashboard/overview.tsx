@@ -30,8 +30,11 @@ export function DashboardOverview({ analyticsData }: DashboardOverviewProps) {
     applicationsByMonth: [] as Array<{ month: string; count: number }>
   })
 
+  const [loading, setLoading] = useState(true)
+
   useEffect(() => {
     calculateStats()
+    setLoading(false)
   }, [analyticsData])
 
   const calculateStats = () => {
@@ -140,11 +143,13 @@ export function DashboardOverview({ analyticsData }: DashboardOverviewProps) {
     { name: 'Rejected', value: stats.rejectedApplications, color: '#ef4444' }
   ].filter(item => item.value > 0)
 
-  const industryData = Object.entries(stats.jobsByIndustry).map(([industry, count]) => ({
-    name: industry.charAt(0).toUpperCase() + industry.slice(1),
-    value: count,
-    color: getIndustryColor(industry)
-  }))
+  const industryData = Object.entries(stats.jobsByIndustry)
+    .filter(([industry, count]) => count > 0)
+    .map(([industry, count]) => ({
+      name: industry.charAt(0).toUpperCase() + industry.slice(1),
+      value: count,
+      color: getIndustryColor(industry)
+    }))
 
   function getIndustryColor(industry: string): string {
     const colors: Record<string, string> = {
@@ -158,20 +163,17 @@ export function DashboardOverview({ analyticsData }: DashboardOverviewProps) {
     return colors[industry.toLowerCase()] || '#6b7280'
   }
 
-  const hasData = analyticsData.lastUpdated > 0
-
-  if (!hasData) {
+  if (loading) {
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h2>
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
-          <div className="flex items-center">
-            <BarChart3 className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
-            <div>
-              <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">Welcome to Dashboard</h3>
-              <p className="text-blue-700 dark:text-blue-300">Navigate to Jobs, Applications, or Candidates to see analytics data</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow animate-pulse">
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
     )

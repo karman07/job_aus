@@ -184,7 +184,7 @@ export function DataManagement() {
               >
                 {industries.map((industry, index) => (
                   <option key={index} value={industry.id}>
-                    {industry.name.charAt(0).toUpperCase() + industry.name.slice(1)}
+                    {industry.name ? industry.name.charAt(0).toUpperCase() + industry.name.slice(1) : 'Unknown'}
                   </option>
                 ))}
               </select>
