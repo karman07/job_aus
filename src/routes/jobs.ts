@@ -8,7 +8,7 @@ import {
   getAllJobs,
   getJobById
 } from '../controllers/jobController';
-import { authenticateToken, requireEmployer } from '../middleware/auth';
+import { authenticateToken, requireEmployer, requireAdmin } from '../middleware/auth';
 
 import { jobContentUpload } from '../middleware/upload';
 
@@ -38,12 +38,12 @@ router.put('/:id', authenticateToken, requireEmployer, jobContentUpload.fields([
 ]), updateJob);
 
 // Admin routes
-router.get('/admin/all', authenticateToken, getAllJobs);
-router.put('/admin/:id', authenticateToken, jobContentUpload.fields([
+router.get('/admin/all', authenticateToken, requireAdmin, getAllJobs);
+router.put('/admin/:id', authenticateToken, requireAdmin, jobContentUpload.fields([
   { name: 'logo', maxCount: 1 },
   { name: 'contentFile', maxCount: 1 }
 ]), jobValidation, updateJob);
-router.delete('/admin/:id', authenticateToken, deleteJob);
+router.delete('/admin/:id', authenticateToken, requireAdmin, deleteJob);
 
 // Single job route (must be last)
 router.get('/:id', getJobById);

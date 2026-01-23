@@ -1,7 +1,12 @@
 import express from 'express';
 import { resumeUpload } from '../middleware/upload';
+import { authenticateToken, requireAdmin } from '../middleware/auth';
+import { getAllApplications } from '../controllers/adminController';
 
 const router = express.Router();
+
+// Admin route - must be first
+router.get('/', authenticateToken, requireAdmin, getAllApplications);
 
 // Create job application
 router.post('/', resumeUpload.single('resume'), async (req, res) => {

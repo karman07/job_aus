@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { resumeUpload, registrationUpload, parseNestedFormData } from '../middleware/upload';
 import {
   getCandidateProfile,
@@ -11,6 +11,7 @@ import {
   saveJob,
   removeSavedJob
 } from '../controllers/candidateController';
+import { getAllCandidates } from '../controllers/adminController';
 
 const router = express.Router();
 
@@ -27,7 +28,10 @@ const profileValidation = [
   body('linkedinUrl').optional().isURL().withMessage('LinkedIn URL must be valid')
 ];
 
-// Routes
+// Admin route - must be first
+router.get('/', authenticateToken, requireAdmin, getAllCandidates);
+
+// Individual candidate routes
 router.get('/profile', authenticateToken, getCandidateProfile);
 router.put('/profile', 
   authenticateToken,

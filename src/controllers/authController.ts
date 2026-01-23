@@ -25,10 +25,126 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const { email, firstName, lastName, password, role, phone, company, candidate } = req.body;
+    const { email, firstName, lastName, password, role, phone, company, candidate, googleAuth } = req.body;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-    console.log('📝 Parsed data:', { email, firstName, lastName, role, phone, company: !!company, candidate: !!candidate });
+    console.log('📝 Parsed data:', { email, firstName, lastName, role, phone, googleAuth, company: !!company, candidate: !!candidate });
+
+    // Handle Google OAuth registration
+    if (googleAuth === 'true' || googleAuth === true) {
+      console.log('🔐 Google OAuth registration detected');
+      
+      // For Google OAuth, set a placeholder password
+      const userPassword = 'google_oauth';
+      
+      // Check if user exists
+      const existingUser = await User.findOne({ email }).lean().select('_id');
+      if (existingUser) {
+        console.log('❌ User already exists:', email);
+        res.status(400).json({
+          success: false,
+          message: 'User already exists with this email address'
+        });
+        return;
+      }
+
+      // Create Google OAuth user
+      const user = new User({
+        email,
+        firstName,
+        lastName,
+        password: userPassword,
+        role,
+        phone,
+        isEmailVerified: true, // Google users are auto-verified
+        authProvider: 'google'
+      });
+
+      await user.save();
+      console.log('✅ Google OAuth user created:', user._id);
+
+      // Generate tokens
+      const { accessToken, refreshToken } = generateTokens(
+        user._id.toString(), 
+        user.email, 
+        user.role
+      );
+      
+      // Save refresh token
+      user.refreshToken = refreshToken;
+      await user.save();
+
+      let profileData = null;
+
+      // Create profile based on role
+      if (role === 'candidate') {
+        console.log('👨💼 Creating candidate profile for Google user...');
+        const profilePhoto = files?.profilePhoto?.[0] ? `/uploads/${files.profilePhoto[0].filename}` : '';
+        const resumeUrl = files?.resume?.[0] ? `/uploads/${files.resume[0].filename}` : '';
+
+        const candidateProfile = new CandidateProfile({
+          userId: user._id,
+          fullName: candidate?.fullName || `${firstName} ${lastName}`,
+          email,
+          phone,
+          location: candidate?.location || '',
+          state: candidate?.state || 'NSW',
+          preferredRole: candidate?.preferredRole || '',
+          profilePhoto: profilePhoto,
+          currentRole: candidate?.currentRole || '',
+          currentCompany: candidate?.currentCompany || '',
+          yearsExperience: candidate?.yearsExperience || '0-1',
+          skills: candidate?.skills || '',
+          education: candidate?.education || '',
+          preferredIndustries: Array.isArray(candidate?.preferredIndustries) 
+            ? candidate.preferredIndustries 
+            : (candidate?.preferredIndustries ? [candidate.preferredIndustries] : []),
+          salaryExpectation: candidate?.salaryExpectation ? Number(candidate.salaryExpectation) : null,
+          availableFrom: candidate?.availableFrom ? new Date(candidate.availableFrom) : null,
+          visaStatus: candidate?.visaStatus || 'citizen',
+          resumeUrl: resumeUrl,
+          portfolioUrl: candidate?.portfolioUrl || '',
+          linkedinUrl: candidate?.linkedinUrl || '',
+          isOpenToWork: candidate?.isOpenToWork === 'true' || candidate?.isOpenToWork === true
+        });
+        await candidateProfile.save();
+        profileData = candidateProfile;
+        console.log('✅ Candidate profile created for Google user');
+      }
+
+      console.log('🎉 Google OAuth registration successful');
+      res.status(201).json({
+        success: true,
+        message: 'Google OAuth registration successful',
+        data: {
+          user: {
+            id: user._id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+            isEmailVerified: user.isEmailVerified,
+            phone: user.phone,
+            authProvider: 'google'
+          },
+          profile: profileData,
+          tokens: {
+            accessToken,
+            refreshToken
+          }
+        }
+      });
+      return;
+    }
+
+    // Regular email/password registration continues here
+    if (!password) {
+      res.status(400).json({
+        success: false,
+        message: 'Password is required for email registration'
+      });
+      return;
+    }
 
     // Early email validation and existence check (with lean query for better performance)
     const existingUser = await User.findOne({ email }).lean().select('_id');

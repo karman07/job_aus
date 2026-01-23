@@ -7,6 +7,7 @@ import {
   logout,
   getProfile
 } from '../controllers/authController';
+import { googleAuth } from '../controllers/googleAuthController';
 import { authenticateToken } from '../middleware/auth';
 import { registrationUpload, parseNestedFormData } from '../middleware/upload';
 
@@ -137,6 +138,8 @@ router.post('/register',
   register
 );
 router.post('/login', loginValidation, login);
+router.post('/google', googleAuth);
+router.post('/google-login', googleAuth);
 router.post('/refresh', refreshTokenValidation, refreshTokenHandler);
 router.post('/logout', authenticateToken, logout);
 router.get('/profile', authenticateToken, getProfile);

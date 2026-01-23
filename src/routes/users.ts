@@ -5,8 +5,9 @@ import {
   updateUserProfile,
   uploadCompanyLogo
 } from '../controllers/userController';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { logoUpload } from '../middleware/upload';
+import { getAllUsers } from '../controllers/adminController';
 
 const router = express.Router();
 
@@ -29,11 +30,11 @@ const profileValidation = [
     .withMessage('Please provide a valid phone number')
 ];
 
-// All routes require authentication
-router.use(authenticateToken);
+// Admin route - must be first
+router.get('/', authenticateToken, requireAdmin, getAllUsers);
 
-// Profile routes
-router.get('/profile', getUserProfile);
+// Individual user routes
+router.get('/profile', authenticateToken, getUserProfile);
 router.put('/profile', profileValidation, updateUserProfile);
 router.post('/upload-logo', logoUpload.single('logo'), uploadCompanyLogo);
 

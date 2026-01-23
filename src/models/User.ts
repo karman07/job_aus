@@ -13,6 +13,8 @@ export interface IUser extends Document {
   refreshToken?: string;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  googleId?: string;
+  authProvider: 'email' | 'google';
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -58,7 +60,16 @@ const userSchema = new Schema<IUser>({
   emailVerificationToken: String,
   refreshToken: String,
   resetPasswordToken: String,
-  resetPasswordExpires: Date
+  resetPasswordExpires: Date,
+  googleId: {
+    type: String,
+    sparse: true
+  },
+  authProvider: {
+    type: String,
+    enum: ['email', 'google'],
+    default: 'email'
+  }
 }, {
   timestamps: true
 });
@@ -66,7 +77,14 @@ const userSchema = new Schema<IUser>({
 // Hash password before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 10); // Reduced from 12 to 10 for faster hashing
+  
+  if (this.password === 'google_oauth') {
+    this.authProvider = 'google';
+    return next();
+  }
+  
+  this.password = await bcrypt.hash(this.password, 10);
+  this.authProvider = 'email';
   next();
 });
 
@@ -77,6 +95,9 @@ userSchema.index({ createdAt: -1 });
 
 // Compare password method
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+  if (this.authProvider === 'google' || this.password === 'google_oauth') {
+    return false;
+  }
   return bcrypt.compare(candidatePassword, this.password);
 };
 

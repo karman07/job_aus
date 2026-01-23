@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requireEmployer, requireAdmin } from '../middleware/auth';
 import { logoUpload, registrationUpload, parseNestedFormData } from '../middleware/upload';
 import {
   getCompanyProfile,
@@ -10,6 +10,7 @@ import {
   getCompanyAnalytics,
   editCompanyJob
 } from '../controllers/companyController';
+import { getAllCompanies } from '../controllers/adminController';
 
 const router = express.Router();
 
@@ -27,7 +28,10 @@ const companyValidation = [
   body('contact.phone').optional().isMobilePhone('any').withMessage('Invalid contact phone')
 ];
 
-// Routes
+// Admin route - must be first
+router.get('/', authenticateToken, requireAdmin, getAllCompanies);
+
+// Individual company routes
 router.get('/profile', authenticateToken, getCompanyProfile);
 router.put('/profile', 
   authenticateToken,

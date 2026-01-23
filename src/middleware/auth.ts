@@ -13,24 +13,33 @@ export const authenticateToken = async (
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
     
+    console.log('🔐 Auth middleware - Token received:', token ? 'Yes' : 'No');
+    
     if (!token) {
+      console.log('❌ No token provided');
       res.status(401).json({ success: false, message: 'Access token required' });
       return;
     }
 
     // Verify JWT token
+    console.log('🔍 Verifying token...');
     const decoded = verifyAccessToken(token) as any;
+    console.log('✅ Token decoded:', { userId: decoded.userId, email: decoded.email, role: decoded.role });
     
     // Find user by ID from token
+    console.log('👤 Finding user by ID:', decoded.userId);
     const user = await User.findById(decoded.userId);
     if (!user) {
+      console.log('❌ User not found in database');
       res.status(401).json({ success: false, message: 'User not found' });
       return;
     }
 
+    console.log('✅ User found:', { id: user._id, email: user.email, role: user.role });
     req.user = user;
     next();
   } catch (error) {
+    console.log('❌ Auth middleware error:', error instanceof Error ? error.message : 'Unknown error');
     if (error instanceof jwt.JsonWebTokenError) {
       res.status(401).json({ success: false, message: 'Invalid token' });
     } else if (error instanceof jwt.TokenExpiredError) {
@@ -44,12 +53,16 @@ export const authenticateToken = async (
 // Role-based middleware
 export const requireRole = (roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    console.log('🛡️  Role check - Required:', roles, 'User role:', req.user?.role);
+    
     if (!req.user) {
+      console.log('❌ No user in request');
       res.status(401).json({ success: false, message: 'Authentication required' });
       return;
     }
 
     if (!roles.includes(req.user.role)) {
+      console.log('❌ Insufficient permissions');
       res.status(403).json({ 
         success: false, 
         message: `Access denied. Required role: ${roles.join(' or ')}` 
@@ -57,6 +70,7 @@ export const requireRole = (roles: string[]) => {
       return;
     }
 
+    console.log('✅ Role check passed');
     next();
   };
 };
