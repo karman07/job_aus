@@ -218,7 +218,6 @@ export const deleteCompany = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-// Job Management
 export const getAllJobs = async (req: Request, res: Response): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
