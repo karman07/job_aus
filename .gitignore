@@ -107,3 +107,5 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+# Firebase service account files
+*firebase-adminsdk*.json
