@@ -137,8 +137,8 @@ export const createJob = async (req: AuthRequest, res: Response): Promise<void> 
         industry: company.industry,
         location: company.location,
         contact: {
-          email: company.contact.email,
-          phone: company.contact.phone
+          email: company.contact?.email || 'Unknown Company',
+          phone: company.contact?.phone || ''
         }
       },
       status: 'active'
@@ -235,8 +235,8 @@ export const createJob = async (req: AuthRequest, res: Response): Promise<void> 
           logo: company.logo,
           size: company.size,
           founded: company.founded,
-          contactEmail: company.contact.email,
-          contactPhone: company.contact.phone,
+          contactEmail: company.contact?.email || '',
+          contactPhone: company.contact?.phone || '',
           isVerified: company.isVerified,
           createdAt: company.createdAt,
           updatedAt: company.updatedAt
