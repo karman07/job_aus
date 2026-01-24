@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import Job from '../models/Job';
 import Company from '../models/Company';
 import { AuthRequest } from '../types';
-
+//
 export const getJobs = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
