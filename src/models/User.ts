@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 export interface IUser extends Document {
   email: string;
   firstName: string;
-  lastName: string;
+  lastName?: string;
   password: string;
   phone?: string;
   role: 'candidate' | 'employer' | 'admin';
@@ -35,7 +35,6 @@ const userSchema = new Schema<IUser>({
   },
   lastName: {
     type: String,
-    required: true,
     trim: true
   },
   password: {

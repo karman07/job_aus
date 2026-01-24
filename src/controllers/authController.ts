@@ -157,8 +157,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Validate company data for employers
-    if (role === 'employer') {
+    // Validate company data for employers (optional now)
+    if (role === 'employer' && company) {
       console.log('🏢 Validating employer data:', company);
       
       // Handle multiple industry values from form data
@@ -173,32 +173,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       
       console.log('🏭 Processed industries:', industries);
       
-      if (!company || !company.name || !company.location || !company.state || !industries.length || !company.contact?.email) {
-        console.log('❌ Missing company data:', {
-          hasCompany: !!company,
-          hasName: !!company?.name,
-          hasLocation: !!company?.location,
-          hasState: !!company?.state,
-          hasIndustries: industries.length > 0,
-          hasContactEmail: !!company?.contact?.email
-        });
-        res.status(400).json({
-          success: false,
-          message: 'Complete company information is required for employer registration',
-          required: ['company.name', 'company.location', 'company.state', 'company.industry', 'company.contact.email'],
-          received: {
-            name: !!company?.name,
-            location: !!company?.location,
-            state: !!company?.state,
-            industry: industries.length > 0,
-            contactEmail: !!company?.contact?.email
-          }
-        });
-        return;
-      }
-      
       // Update company object with processed industries
-      company.industry = industries;
+      if (industries.length > 0) {
+        company.industry = industries;
+      }
     }
 
     console.log('👤 Creating user...');
@@ -273,18 +251,18 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
           const companyData = {
             userId: user._id,
-            name: company.name,
-            description: company.description || '',
-            website: company.website || '',
+            name: company?.name || '',
+            description: company?.description || '',
+            website: company?.website || '',
             logo: logoUrl,
-            size: company.size || '',
-            founded: company.founded ? Number(company.founded) : null,
-            industry: Array.isArray(company.industry) ? company.industry : [company.industry],
-            location: company.location,
-            state: company.state,
+            size: company?.size || '',
+            founded: company?.founded ? Number(company.founded) : null,
+            industry: company?.industry ? (Array.isArray(company.industry) ? company.industry : [company.industry]) : [],
+            location: company?.location || '',
+            state: company?.state || null,
             contact: {
-              email: company.contact.email,
-              phone: company.contact.phone || phone || ''
+              email: company?.contact?.email || email,
+              phone: company?.contact?.phone || phone || ''
             },
             isVerified: false
           };
@@ -320,6 +298,18 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       // If profile creation fails, clean up the user
       console.error('💥 Profile creation failed, cleaning up user:', profileError.message);
       await User.findByIdAndDelete(user._id);
+      
+      // Handle profile validation errors
+      if (profileError.name === 'ValidationError') {
+        const validationErrors = Object.values(profileError.errors).map((err: any) => err.message);
+        res.status(400).json({
+          success: false,
+          message: 'Profile validation failed',
+          errors: validationErrors
+        });
+        return;
+      }
+      
       throw profileError;
     }
 

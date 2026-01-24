@@ -3,33 +3,33 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface ICandidateProfile extends Document {
   userId: string;
   // Personal Details
-  fullName: string;
-  email: string;
-  phone: string;
-  location: string;
-  state: 'NSW' | 'VIC' | 'QLD' | 'WA' | 'SA' | 'TAS' | 'ACT' | 'NT';
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  state?: 'NSW' | 'VIC' | 'QLD' | 'WA' | 'SA' | 'TAS' | 'ACT' | 'NT';
   preferredRole?: string;
   profilePhoto?: string;
   
   // Experience
-  currentRole: string;
+  currentRole?: string;
   currentCompany?: string;
-  yearsExperience: string;
+  yearsExperience?: string;
   skills?: string;
   education?: string;
   
   // Additional Profile Info
-  preferredIndustries: string[];
+  preferredIndustries?: string[];
   salaryExpectation?: number;
   availableFrom?: Date;
-  visaStatus: 'citizen' | 'pr' | 'visa_holder' | 'needs_sponsorship';
+  visaStatus?: 'citizen' | 'pr' | 'visa_holder' | 'needs_sponsorship';
   resumeUrl?: string;
   portfolioUrl?: string;
   linkedinUrl?: string;
   coverLetterUrl?: string;
   certificatesUrls?: string[];
-  isOpenToWork: boolean;
-  profileViews: number;
+  isOpenToWork?: boolean;
+  profileViews?: number;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -2,20 +2,20 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ICompany extends Document {
   userId: string;
-  name: string;
+  name?: string;
   description?: string;
   website?: string;
   logo?: string;
   size?: string;
   founded?: number;
-  industry: ('health' | 'hospitality' | 'childcare' | 'construction' | 'mining' | 'technology')[];
-  location: string;
-  state: 'NSW' | 'VIC' | 'QLD' | 'WA' | 'SA' | 'TAS' | 'ACT' | 'NT';
-  contact: {
-    email: string;
+  industry?: ('health' | 'hospitality' | 'childcare' | 'construction' | 'mining' | 'technology')[];
+  location?: string;
+  state?: 'NSW' | 'VIC' | 'QLD' | 'WA' | 'SA' | 'TAS' | 'ACT' | 'NT';
+  contact?: {
+    email?: string;
     phone?: string;
   };
-  isVerified: boolean;
+  isVerified?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,7 +29,6 @@ const companySchema = new Schema<ICompany>({
   },
   name: {
     type: String,
-    required: true,
     trim: true
   },
   description: {
@@ -57,23 +56,19 @@ const companySchema = new Schema<ICompany>({
   },
   industry: [{
     type: String,
-    enum: ['health', 'hospitality', 'childcare', 'construction', 'mining', 'technology'],
-    required: true
+    enum: ['health', 'hospitality', 'childcare', 'construction', 'mining', 'technology']
   }],
   location: {
     type: String,
-    required: true,
     trim: true
   },
   state: {
     type: String,
-    enum: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'],
-    required: true
+    enum: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT']
   },
   contact: {
     email: {
       type: String,
-      required: true,
       lowercase: true,
       trim: true
     },
