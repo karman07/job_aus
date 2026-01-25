@@ -152,7 +152,7 @@ export function JobsManagement({ onDataUpdate }: JobsManagementProps) {
         return
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/jobs`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

@@ -6,15 +6,28 @@ import { Pagination } from '../pagination'
 
 interface Application {
   _id: string
+  candidateId: string
+  jobId: {
+    _id: string
+    title: string
+    location: string
+  }
   fullName: string
   email: string
   phone: string
+  location: string
+  preferredRole: string
   currentRole: string
   currentCompany: string
   yearsExperience: string
+  skills: string
+  education: string
   resumeUrl: string
   status: string
+  customFields: Array<any>
   appliedAt: string
+  createdAt: string
+  updatedAt: string
 }
 
 interface ApplicationsManagementProps {
@@ -61,7 +74,21 @@ export function ApplicationsManagement({ onDataUpdate }: ApplicationsManagementP
       
       if (response.ok) {
         const data = await response.json()
-        const applicationsData = data.data?.applications || data.applications || Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : []
+        console.log('Applications API Response:', data) // Debug log
+        
+        // Force extract applications from any possible structure
+        let applicationsData = []
+        if (data.data?.applications) {
+          applicationsData = data.data.applications
+        } else if (data.applications) {
+          applicationsData = data.applications
+        } else if (Array.isArray(data.data)) {
+          applicationsData = data.data
+        } else if (Array.isArray(data)) {
+          applicationsData = data
+        }
+        
+        console.log('Extracted applications:', applicationsData) // Debug log
         setApplications(applicationsData)
         setTotalPages(Math.ceil(applicationsData.length / itemsPerPage))
         onDataUpdate?.(applicationsData)
@@ -74,13 +101,16 @@ export function ApplicationsManagement({ onDataUpdate }: ApplicationsManagementP
     }
   }
 
-  const filteredApplications = Array.isArray(applications) ? applications.filter(app => {
-    const matchesSearch = 
-      app.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredApplications = Array.isArray(applications) && applications.length > 0 ? applications.filter(app => {
+    if (!app) return false // Skip null/undefined items
+    
+    const matchesSearch = !searchTerm.trim() || (
+      (app.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (app.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+    )
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter
     return matchesSearch && matchesStatus
-  }) : []
+  }) : applications || [] // Return all applications if filtering fails
 
   // Client-side pagination
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -162,36 +192,47 @@ export function ApplicationsManagement({ onDataUpdate }: ApplicationsManagementP
                 <tr>
                   <td colSpan={5} className="px-6 py-4 text-center text-gray-500">Loading...</td>
                 </tr>
+              ) : applications.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                    No applications found. Total applications in state: {applications.length}
+                  </td>
+                </tr>
               ) : paginatedApplications.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No applications found</td>
+                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                    No applications match current filters. Total: {applications.length}, Filtered: {filteredApplications.length}
+                  </td>
                 </tr>
               ) : (
                 paginatedApplications.map((application) => (
-                  <tr key={application._id}>
+                  <tr key={application._id || Math.random()}>
                     <td className="px-6 py-4">
                       <div>
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {application.fullName}
+                          {application.fullName || 'N/A'}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {application.email}
+                          {application.email || 'N/A'}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {application.currentRole} at {application.currentCompany}
+                          {application.currentRole || 'N/A'} at {application.currentCompany || 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          Applied for: {application.jobId?.title || 'N/A'} - {application.jobId?.location || 'N/A'}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                      {application.yearsExperience}
+                      {application.yearsExperience || 'N/A'}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(application.status)}`}>
-                        {application.status}
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(application.status || 'Unknown')}`}>
+                        {application.status || 'Unknown'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(application.appliedAt).toLocaleDateString()}
+                      {application.appliedAt ? new Date(application.appliedAt).toLocaleDateString() : 'N/A'}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium">
                       <div className="flex items-center space-x-2">
@@ -207,7 +248,7 @@ export function ApplicationsManagement({ onDataUpdate }: ApplicationsManagementP
                         </button>
                         {application.resumeUrl && (
                           <a
-                            href={application.resumeUrl}
+                            href={`${process.env.NEXT_PUBLIC_UPLOAD_BASE_URL}${application.resumeUrl}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-purple-600 hover:text-purple-900 dark:text-purple-400"
@@ -273,6 +314,38 @@ export function ApplicationsManagement({ onDataUpdate }: ApplicationsManagementP
                   <p className="text-sm text-gray-900 dark:text-white">{selectedApplication.currentCompany}</p>
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Applied Job</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedApplication.jobId?.title}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Job Location</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedApplication.jobId?.location}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Preferred Role</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedApplication.preferredRole}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Education</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedApplication.education}</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Skills</label>
+                <p className="text-sm text-gray-900 dark:text-white">{selectedApplication.skills}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Location</label>
+                <p className="text-sm text-gray-900 dark:text-white">{selectedApplication.location}</p>
+              </div>
             </div>
 
             <div className="flex justify-end space-x-3 pt-6">
@@ -284,7 +357,7 @@ export function ApplicationsManagement({ onDataUpdate }: ApplicationsManagementP
               </button>
               {selectedApplication.resumeUrl && (
                 <a
-                  href={selectedApplication.resumeUrl}
+                  href={`${process.env.NEXT_PUBLIC_UPLOAD_BASE_URL}${selectedApplication.resumeUrl}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
