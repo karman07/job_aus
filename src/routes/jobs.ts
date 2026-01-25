@@ -26,14 +26,39 @@ const jobValidation = [
 ];
 
 // Public routes
-router.get('/', getJobs);
+router.get('/', (req, res) => {
+  // Check if user is admin to show all jobs including inactive
+  if (req.headers.authorization) {
+    const token = req.headers.authorization.split(' ')[1];
+    if (token) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as any;
+        if (decoded) {
+          const User = require('../models/User').default;
+          User.findById(decoded.userId).then((user: any) => {
+            if (user && user.role === 'admin') {
+              getAllJobs(req, res);
+            } else {
+              getJobs(req, res);
+            }
+          }).catch(() => getJobs(req, res));
+          return;
+        }
+      } catch {
+        // Token invalid, fall through to public route
+      }
+    }
+  }
+  getJobs(req, res);
+});
 
 // Employer routes - require authentication
 router.post('/', authenticateToken, requireEmployer, jobContentUpload.fields([
   { name: 'contentFile', maxCount: 1 }
 ]), jobValidation, createJob);
 
-router.put('/:id', authenticateToken, requireEmployer, jobContentUpload.fields([
+router.put('/:id', authenticateToken, jobContentUpload.fields([
   { name: 'contentFile', maxCount: 1 }
 ]), updateJob);
 

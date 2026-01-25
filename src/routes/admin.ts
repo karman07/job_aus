@@ -13,12 +13,15 @@ import {
   verifyCompany,
   updateCompany,
   deleteCompany,
+  createCompany,
   getAllCandidates,
   updateCandidate,
   deleteCandidate,
+  createCandidate,
   getAllJobs,
   updateJob,
   deleteJob,
+  createJob,
   getAllApplications,
   updateApplicationStatus,
   deleteApplication,
@@ -132,17 +135,20 @@ router.delete('/users/:id', authenticateToken, requireAdmin, deleteUser);
 
 // Job Management Routes
 router.get('/jobs', authenticateToken, requireAdmin, getAllJobs);
+router.post('/jobs', authenticateToken, requireAdmin, createJob);
 router.put('/jobs/:id', authenticateToken, requireAdmin, updateJob);
 router.delete('/jobs/:id', authenticateToken, requireAdmin, deleteJob);
 
 // Company Management Routes
 router.get('/companies', authenticateToken, requireAdmin, getAllCompanies);
+router.post('/companies', authenticateToken, requireAdmin, createCompany);
 router.put('/companies/:id', authenticateToken, requireAdmin, updateCompany);
 router.post('/companies/:id/verify', authenticateToken, requireAdmin, verifyCompany);
 router.delete('/companies/:id', authenticateToken, requireAdmin, deleteCompany);
 
 // Candidate Management Routes
 router.get('/candidates', authenticateToken, requireAdmin, getAllCandidates);
+router.post('/candidates', authenticateToken, requireAdmin, createCandidate);
 router.put('/candidates/:id', authenticateToken, requireAdmin, updateCandidate);
 router.delete('/candidates/:id', authenticateToken, requireAdmin, deleteCandidate);
 

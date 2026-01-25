@@ -151,6 +151,41 @@ export const getAllCompanies = async (req: Request, res: Response): Promise<void
   }
 };
 
+export const createCompany = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId, ...companyData } = req.body;
+    
+    // Verify the user exists and is an employer
+    const user = await User.findOne({ _id: userId, role: 'employer' });
+    if (!user) {
+      res.status(400).json({ success: false, message: 'Invalid employer user ID' });
+      return;
+    }
+
+    // Check if company already exists for this user
+    const existingCompany = await Company.findOne({ userId });
+    if (existingCompany) {
+      res.status(400).json({ success: false, message: 'Company already exists for this user' });
+      return;
+    }
+
+    const company = new Company({
+      ...companyData,
+      userId: user._id
+    });
+
+    await company.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Company created successfully',
+      data: { company }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 export const verifyCompany = async (req: Request, res: Response): Promise<void> => {
   try {
     const company = await Company.findByIdAndUpdate(
@@ -252,6 +287,45 @@ export const getAllJobs = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+export const createJob = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log('📝 Create job request body:', JSON.stringify(req.body, null, 2));
+    const { postedBy, ...jobData } = req.body;
+    
+    if (!postedBy) {
+      res.status(400).json({ success: false, message: 'postedBy field is required' });
+      return;
+    }
+    
+    // Verify the employer exists
+    const employer = await User.findOne({ _id: postedBy, role: 'employer' });
+    if (!employer) {
+      res.status(400).json({ success: false, message: 'Invalid employer ID or user is not an employer' });
+      return;
+    }
+
+    const job = new Job({
+      ...jobData,
+      postedBy: employer._id
+    });
+
+    await job.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Job created successfully',
+      data: { job }
+    });
+  } catch (error: any) {
+    console.error('💥 Create job error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 export const updateJob = async (req: Request, res: Response): Promise<void> => {
   try {
     const job = await Job.findByIdAndUpdate(
@@ -322,6 +396,41 @@ export const getAllCandidates = async (req: Request, res: Response): Promise<voi
           totalPages: Math.ceil(total / limit)
         }
       }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const createCandidate = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId, ...candidateData } = req.body;
+    
+    // Verify the user exists and is a candidate
+    const user = await User.findOne({ _id: userId, role: 'candidate' });
+    if (!user) {
+      res.status(400).json({ success: false, message: 'Invalid candidate user ID' });
+      return;
+    }
+
+    // Check if candidate profile already exists for this user
+    const existingCandidate = await CandidateProfile.findOne({ userId });
+    if (existingCandidate) {
+      res.status(400).json({ success: false, message: 'Candidate profile already exists for this user' });
+      return;
+    }
+
+    const candidate = new CandidateProfile({
+      ...candidateData,
+      userId: user._id
+    });
+
+    await candidate.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Candidate profile created successfully',
+      data: { candidate }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error' });
