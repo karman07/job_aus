@@ -40,31 +40,36 @@ export function DashboardOverview({ analyticsData }: DashboardOverviewProps) {
   const calculateStats = () => {
     const { jobs, applications, candidates } = analyticsData
     
+    // Ensure all data are arrays
+    const jobsArray = Array.isArray(jobs) ? jobs : []
+    const applicationsArray = Array.isArray(applications) ? applications : []
+    const candidatesArray = Array.isArray(candidates) ? candidates : []
+    
     // Job statistics
-    const totalJobs = jobs.length
-    const activeJobs = jobs.filter(job => job.status === 'Active').length
+    const totalJobs = jobsArray.length
+    const activeJobs = jobsArray.filter(job => job.status === 'Active').length
     
     // Application statistics
-    const totalApplications = applications.length
-    const pendingApplications = applications.filter(app => app.status === 'Pending').length
-    const interviewApplications = applications.filter(app => app.status === 'Interview').length
-    const hiredApplications = applications.filter(app => app.status === 'Hired').length
-    const rejectedApplications = applications.filter(app => app.status === 'Rejected').length
+    const totalApplications = applicationsArray.length
+    const pendingApplications = applicationsArray.filter(app => app.status === 'Pending').length
+    const interviewApplications = applicationsArray.filter(app => app.status === 'Interview').length
+    const hiredApplications = applicationsArray.filter(app => app.status === 'Hired').length
+    const rejectedApplications = applicationsArray.filter(app => app.status === 'Rejected').length
     
     // Jobs by industry
-    const jobsByIndustry = jobs.reduce((acc, job) => {
+    const jobsByIndustry = jobsArray.reduce((acc, job) => {
       const industry = job.industry || 'Other'
       acc[industry] = (acc[industry] || 0) + 1
       return acc
     }, {} as Record<string, number>)
     
     // Applications by month (last 6 months)
-    const applicationsByMonth = getApplicationsByMonth(applications)
+    const applicationsByMonth = getApplicationsByMonth(applicationsArray)
     
     setStats({
       totalJobs,
       activeJobs,
-      totalCandidates: candidates.length,
+      totalCandidates: candidatesArray.length,
       totalApplications,
       pendingApplications,
       interviewApplications,

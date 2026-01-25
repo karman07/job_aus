@@ -48,54 +48,34 @@ export function AdminManagement({ onDataUpdate }: AdminManagementProps) {
         return
       }
 
-      console.log('Testing multiple endpoints with token:', token)
+      console.log('Fetching admins with token:', token)
       
-      // Test different possible endpoints
-      const endpoints = [
-        '/admin',
-        '/admin/',
-        '/users',
-        '/auth/verify'
-      ]
-      
-      for (const endpoint of endpoints) {
-        try {
-          console.log(`Testing endpoint: ${endpoint}`)
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}${endpoint}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          })
-          
-          console.log(`${endpoint} - Status:`, response.status)
-          
-          if (response.ok) {
-            const data = await response.json()
-            console.log(`${endpoint} - Success:`, data)
-            
-            // If this endpoint works, use its data
-            if (endpoint === '/admin' || endpoint === '/admin/') {
-              const adminsData = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : []
-              setAdmins(adminsData)
-              setTotalPages(Math.ceil(adminsData.length / itemsPerPage))
-              onDataUpdate?.(adminsData)
-              return
-            }
-          } else {
-            const errorText = await response.text()
-            console.log(`${endpoint} - Error:`, response.status, errorText)
-          }
-        } catch (e) {
-          console.log(`${endpoint} - Exception:`, e)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/admins`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
+      })
+      
+      console.log('Admin fetch - Status:', response.status)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Admin fetch - Success:', data)
+        
+        const adminsData = data.data?.admins || data.admins || []
+        console.log('Extracted admins data:', adminsData)
+        
+        setAdmins(adminsData)
+        setTotalPages(Math.ceil(adminsData.length / itemsPerPage))
+        onDataUpdate?.(adminsData)
+      } else {
+        const errorText = await response.text()
+        console.log('Admin fetch - Error:', response.status, errorText)
+        setAdmins([])
       }
-      
-      // If no endpoint worked, set empty array
-      setAdmins([])
-      
     } catch (error) {
-      console.error('Error testing endpoints:', error)
+      console.error('Error fetching admins:', error)
       setAdmins([])
     } finally {
       setLoading(false)

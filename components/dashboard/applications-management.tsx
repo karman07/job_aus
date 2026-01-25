@@ -45,7 +45,7 @@ export function ApplicationsManagement({ onDataUpdate }: ApplicationsManagementP
         return
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/applications`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/applications`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -61,7 +61,7 @@ export function ApplicationsManagement({ onDataUpdate }: ApplicationsManagementP
       
       if (response.ok) {
         const data = await response.json()
-        const applicationsData = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : []
+        const applicationsData = data.data?.applications || data.applications || Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : []
         setApplications(applicationsData)
         setTotalPages(Math.ceil(applicationsData.length / itemsPerPage))
         onDataUpdate?.(applicationsData)
