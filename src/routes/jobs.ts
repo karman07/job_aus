@@ -25,31 +25,32 @@ const jobValidation = [
   body('salaryDisplay').trim().isLength({ min: 1 }).withMessage('Salary display is required')
 ];
 
-// Public routes
-router.get('/', (req, res) => {
-  // Check if user is admin to show all jobs including inactive
+// Public routes - admins see all jobs, others see only active
+router.get('/', async (req, res) => {
+  console.log('🔍 Jobs route accessed with auth:', !!req.headers.authorization);
+  
   if (req.headers.authorization) {
     const token = req.headers.authorization.split(' ')[1];
     if (token) {
       try {
-        const jwt = require('jsonwebtoken');
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as any;
-        if (decoded) {
-          const User = require('../models/User').default;
-          User.findById(decoded.userId).then((user: any) => {
-            if (user && user.role === 'admin') {
-              getAllJobs(req, res);
-            } else {
-              getJobs(req, res);
-            }
-          }).catch(() => getJobs(req, res));
-          return;
+        const { verifyAccessToken } = require('../utils/jwt');
+        const decoded = verifyAccessToken(token) as any;
+        console.log('🔓 Token decoded, userId:', decoded.userId, 'role:', decoded.role);
+        
+        const User = require('../models/User').default;
+        const user = await User.findById(decoded.userId);
+        console.log('👤 User found:', !!user, 'role:', user?.role);
+        
+        if (user?.role === 'admin') {
+          console.log('✅ Admin access - returning all jobs');
+          return getAllJobs(req, res);
         }
-      } catch {
-        // Token invalid, fall through to public route
+      } catch (error: any) {
+        console.log('❌ Token verification failed:', error?.message || 'Unknown error');
       }
     }
   }
+  console.log('📋 Regular access - returning active jobs only');
   getJobs(req, res);
 });
 

@@ -439,9 +439,24 @@ export const getJobById = async (req: Request, res: Response): Promise<void> => 
 
 export const getAllJobs = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log('📋 getAllJobs called - fetching all jobs regardless of status');
+    
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
+
+    // Debug: Check all jobs first
+    const allJobsCount = await Job.countDocuments({});
+    console.log('📊 Total jobs in database:', allJobsCount);
+    
+    if (allJobsCount > 0) {
+      const sampleJobs = await Job.find({}).limit(3);
+      console.log('📋 Sample jobs:', sampleJobs.map(job => ({ 
+        id: job._id, 
+        title: job.title, 
+        status: job.status 
+      })));
+    }
 
     const jobs = await Job.find({})
       .sort({ createdAt: -1 })
@@ -449,6 +464,8 @@ export const getAllJobs = async (req: Request, res: Response): Promise<void> => 
       .limit(limit);
 
     const total = await Job.countDocuments({});
+    
+    console.log('📊 Jobs returned:', jobs.length, 'Total:', total);
 
     res.json({
       success: true,
@@ -463,6 +480,7 @@ export const getAllJobs = async (req: Request, res: Response): Promise<void> => 
       }
     });
   } catch (error) {
+    console.error('❌ getAllJobs error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };

@@ -49,30 +49,23 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
 
     // Check if user already exists
     let user = await User.findOne({ email });
-    let isNewUser = false;
 
     if (!user) {
-      // Create new user
-      isNewUser = true;
-      user = new User({
-        email,
-        firstName: given_name,
-        lastName: family_name,
-        password: 'google_oauth', // Placeholder password for OAuth users
-        role: userRole,
-        isEmailVerified: email_verified || false,
-        googleId: decodedToken.uid
+      // User not registered - return error
+      res.status(400).json({
+        success: false,
+        message: 'User not registered. Please register first before using Google login.',
+        code: 'USER_NOT_REGISTERED'
       });
-      await user.save();
-      console.log('✅ New Google user created:', user._id);
-    } else {
-      // Update existing user with Google ID if not present
-      if (!user.googleId) {
-        user.googleId = decodedToken.uid;
-        await user.save();
-      }
-      console.log('✅ Existing user logged in via Google:', user._id);
+      return;
     }
+
+    // Update existing user with Google ID if not present
+    if (!user.googleId) {
+      user.googleId = decodedToken.uid;
+      await user.save();
+    }
+    console.log('✅ Existing user logged in via Google:', user._id);
 
     // Generate tokens
     const { accessToken, refreshToken } = generateTokens(
@@ -87,67 +80,16 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
 
     let profileData = null;
 
-    // Create profile for new users
-    if (isNewUser) {
-      if (userRole === 'candidate') {
-        const candidateProfile = new CandidateProfile({
-          userId: user._id,
-          fullName: `${given_name} ${family_name}`,
-          email,
-          profilePhoto: picture || '',
-          // Set defaults or use additional data if provided
-          location: additionalData?.location || '',
-          state: additionalData?.state || 'NSW',
-          currentRole: additionalData?.currentRole || '',
-          yearsExperience: additionalData?.yearsExperience || '0-1',
-          preferredIndustries: additionalData?.preferredIndustries || [],
-          visaStatus: additionalData?.visaStatus || 'citizen',
-          isOpenToWork: true
-        });
-        await candidateProfile.save();
-        profileData = candidateProfile;
-        console.log('✅ Candidate profile created for Google user');
-
-      } else if (userRole === 'employer') {
-        if (!additionalData?.company) {
-          res.status(400).json({
-            success: false,
-            message: 'Company information is required for employer registration'
-          });
-          return;
-        }
-
-        const companyProfile = new Company({
-          userId: user._id,
-          name: additionalData.company.name,
-          description: additionalData.company.description || '',
-          website: additionalData.company.website || '',
-          logo: picture || '',
-          industry: additionalData.company.industry || ['technology'],
-          location: additionalData.company.location,
-          state: additionalData.company.state,
-          contact: {
-            email: additionalData.company.contact?.email || email,
-            phone: additionalData.company.contact?.phone || ''
-          },
-          isVerified: false
-        });
-        await companyProfile.save();
-        profileData = companyProfile;
-        console.log('✅ Company profile created for Google user');
-      }
-    } else {
-      // Get existing profile
-      if (user.role === 'candidate') {
-        profileData = await CandidateProfile.findOne({ userId: user._id });
-      } else if (user.role === 'employer') {
-        profileData = await Company.findOne({ userId: user._id });
-      }
+    // Get existing profile
+    if (user.role === 'candidate') {
+      profileData = await CandidateProfile.findOne({ userId: user._id });
+    } else if (user.role === 'employer') {
+      profileData = await Company.findOne({ userId: user._id });
     }
 
-    res.status(isNewUser ? 201 : 200).json({
+    res.status(200).json({
       success: true,
-      message: isNewUser ? 'Google registration successful' : 'Google login successful',
+      message: 'Google login successful',
       data: {
         user: {
           id: user._id,
@@ -163,7 +105,7 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
           accessToken,
           refreshToken
         },
-        isNewUser
+        isNewUser: false
       }
     });
 
