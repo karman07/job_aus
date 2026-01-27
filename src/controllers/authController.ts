@@ -110,12 +110,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         await candidateProfile.save();
         profileData = candidateProfile;
         console.log('✅ Candidate profile created for Google user');
-      } else if (role === 'employer' && company) {
-        console.log('🏢 Creating company profile for Google user...');
+      } else if (role === 'employer') {
+        console.log('🏢 Creating company profile for Google employer...');
         const logoUrl = files?.logo?.[0] ? `/uploads/${files.logo[0].filename}` : '';
 
         // Handle multiple industry values
-        let industries = [];
+        let industries = ['technology']; // Default industry
         if (company?.industry) {
           if (Array.isArray(company.industry)) {
             industries = company.industry;
@@ -124,26 +124,27 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           }
         }
 
+        // Always create company profile for employers (mandatory)
         const companyProfile = new Company({
           userId: user._id,
-          name: company.name || '',
-          description: company.description || '',
-          website: company.website || '',
+          name: company?.name || `${firstName} ${lastName} Company`,
+          description: company?.description || '',
+          website: company?.website || '',
           logo: logoUrl,
-          size: company.size || '',
-          founded: company.founded ? Number(company.founded) : null,
+          size: company?.size || '1-10',
+          founded: company?.founded ? Number(company.founded) : new Date().getFullYear(),
           industry: industries,
-          location: company.location || '',
-          state: company.state || 'NSW',
+          location: company?.location || '',
+          state: company?.state || 'NSW',
           contact: {
-            email: company.contact?.email || email,
-            phone: company.contact?.phone || phone || ''
+            email: company?.contact?.email || email,
+            phone: company?.contact?.phone || phone || ''
           },
           isVerified: false
         });
         await companyProfile.save();
         profileData = companyProfile;
-        console.log('✅ Company profile created for Google user');
+        console.log('✅ Company profile created for Google employer');
       }
 
       console.log('🎉 Google OAuth registration successful');
@@ -204,8 +205,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             accessToken,
             refreshToken
           },
-          registrationComplete: !!profileData,
-          nextStep: role === 'employer' && !profileData ? 'complete-company-profile' : 'dashboard',
+          registrationComplete: role === 'employer' ? true : !!profileData,
+          nextStep: 'dashboard',
           profileType: role === 'candidate' ? 'candidate' : 'company'
         }
       });
@@ -324,17 +325,18 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           // Handle logo upload for employer
           const logoUrl = files?.logo?.[0] ? `/uploads/${files.logo[0].filename}` : '';
 
+          // For employers, always create a company profile (mandatory)
           const companyData = {
             userId: user._id,
-            name: company?.name || '',
+            name: company?.name || `${firstName} ${lastName} Company`,
             description: company?.description || '',
             website: company?.website || '',
             logo: logoUrl,
-            size: company?.size || '',
-            founded: company?.founded ? Number(company.founded) : null,
-            industry: company?.industry ? (Array.isArray(company.industry) ? company.industry : [company.industry]) : [],
+            size: company?.size || '1-10',
+            founded: company?.founded ? Number(company.founded) : new Date().getFullYear(),
+            industry: company?.industry ? (Array.isArray(company.industry) ? company.industry : [company.industry]) : ['technology'],
             location: company?.location || '',
-            state: company?.state || null,
+            state: company?.state || 'NSW',
             contact: {
               email: company?.contact?.email || email,
               phone: company?.contact?.phone || phone || ''
@@ -449,8 +451,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           accessToken,
           refreshToken
         },
-        registrationComplete: !!profileData,
-        nextStep: role === 'employer' && !profileData ? 'complete-company-profile' : 'dashboard',
+        registrationComplete: role === 'employer' ? true : !!profileData,
+        nextStep: 'dashboard',
         profileType: role === 'candidate' ? 'candidate' : 'company'
       }
     });

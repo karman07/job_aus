@@ -24,9 +24,10 @@ const registerValidation = [
     .isLength({ min: 1 })
     .withMessage('First name is required'),
   body('lastName')
+    .optional()
     .trim()
     .isLength({ min: 1 })
-    .withMessage('Last name is required'),
+    .withMessage('Last name cannot be empty if provided'),
   body('password')
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters long'),

@@ -22,7 +22,7 @@ const profileValidation = [
     .optional()
     .trim()
     .isLength({ min: 1 })
-    .withMessage('Last name cannot be empty'),
+    .withMessage('Last name cannot be empty if provided'),
   body('phone')
     .optional()
     .trim()

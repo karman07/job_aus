@@ -56,7 +56,7 @@ export const getEmployerJobs = async (req: AuthRequest, res: Response): Promise<
         employer: {
           id: user._id,
           email: user.email,
-          name: `${user.firstName} ${user.lastName}`
+          name: `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}`
         }
       }
     });
@@ -172,7 +172,7 @@ export const updateEmployerJob = async (req: AuthRequest, res: Response): Promis
         employer: {
           id: user._id,
           email: user.email,
-          name: `${user.firstName} ${user.lastName}`
+          name: `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}`
         }
       } 
     });
@@ -254,7 +254,7 @@ export const deleteEmployerJob = async (req: AuthRequest, res: Response): Promis
         employer: {
           id: user._id,
           email: user.email,
-          name: `${user.firstName} ${user.lastName}`
+          name: `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}`
         }
       }
     });
