@@ -110,6 +110,40 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         await candidateProfile.save();
         profileData = candidateProfile;
         console.log('✅ Candidate profile created for Google user');
+      } else if (role === 'employer' && company) {
+        console.log('🏢 Creating company profile for Google user...');
+        const logoUrl = files?.logo?.[0] ? `/uploads/${files.logo[0].filename}` : '';
+
+        // Handle multiple industry values
+        let industries = [];
+        if (company?.industry) {
+          if (Array.isArray(company.industry)) {
+            industries = company.industry;
+          } else {
+            industries = [company.industry];
+          }
+        }
+
+        const companyProfile = new Company({
+          userId: user._id,
+          name: company.name || '',
+          description: company.description || '',
+          website: company.website || '',
+          logo: logoUrl,
+          size: company.size || '',
+          founded: company.founded ? Number(company.founded) : null,
+          industry: industries,
+          location: company.location || '',
+          state: company.state || 'NSW',
+          contact: {
+            email: company.contact?.email || email,
+            phone: company.contact?.phone || phone || ''
+          },
+          isVerified: false
+        });
+        await companyProfile.save();
+        profileData = companyProfile;
+        console.log('✅ Company profile created for Google user');
       }
 
       console.log('🎉 Google OAuth registration successful');
@@ -127,11 +161,52 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             phone: user.phone,
             authProvider: 'google'
           },
-          profile: profileData,
+          profile: profileData ? {
+            id: profileData._id,
+            userId: profileData.userId,
+            ...(role === 'candidate' && 'fullName' in profileData ? {
+              fullName: profileData.fullName,
+              email: profileData.email,
+              phone: profileData.phone,
+              location: profileData.location,
+              state: profileData.state,
+              preferredRole: profileData.preferredRole,
+              currentRole: profileData.currentRole,
+              currentCompany: profileData.currentCompany,
+              yearsExperience: profileData.yearsExperience,
+              skills: profileData.skills,
+              education: profileData.education,
+              preferredIndustries: profileData.preferredIndustries,
+              salaryExpectation: profileData.salaryExpectation,
+              visaStatus: profileData.visaStatus,
+              isOpenToWork: profileData.isOpenToWork,
+              profilePhoto: profileData.profilePhoto,
+              resumeUrl: profileData.resumeUrl,
+              portfolioUrl: profileData.portfolioUrl,
+              linkedinUrl: profileData.linkedinUrl
+            } : role === 'employer' && 'name' in profileData ? {
+              name: profileData.name,
+              description: profileData.description,
+              website: profileData.website,
+              logo: profileData.logo,
+              size: profileData.size,
+              founded: profileData.founded,
+              industry: profileData.industry,
+              location: profileData.location,
+              state: profileData.state,
+              contact: profileData.contact,
+              isVerified: profileData.isVerified
+            } : {}),
+            createdAt: profileData.createdAt,
+            updatedAt: profileData.updatedAt
+          } : null,
           tokens: {
             accessToken,
             refreshToken
-          }
+          },
+          registrationComplete: !!profileData,
+          nextStep: role === 'employer' && !profileData ? 'complete-company-profile' : 'dashboard',
+          profileType: role === 'candidate' ? 'candidate' : 'company'
         }
       });
       return;
@@ -328,13 +403,55 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           lastName: user.lastName,
           role: user.role,
           isEmailVerified: user.isEmailVerified,
-          phone: user.phone
+          phone: user.phone,
+          authProvider: user.authProvider || 'email'
         },
-        profile: profileData,
+        profile: profileData ? {
+          id: profileData._id,
+          userId: profileData.userId,
+          ...(role === 'candidate' && 'fullName' in profileData ? {
+            fullName: profileData.fullName,
+            email: profileData.email,
+            phone: profileData.phone,
+            location: profileData.location,
+            state: profileData.state,
+            preferredRole: profileData.preferredRole,
+            currentRole: profileData.currentRole,
+            currentCompany: profileData.currentCompany,
+            yearsExperience: profileData.yearsExperience,
+            skills: profileData.skills,
+            education: profileData.education,
+            preferredIndustries: profileData.preferredIndustries,
+            salaryExpectation: profileData.salaryExpectation,
+            visaStatus: profileData.visaStatus,
+            isOpenToWork: profileData.isOpenToWork,
+            profilePhoto: profileData.profilePhoto,
+            resumeUrl: profileData.resumeUrl,
+            portfolioUrl: profileData.portfolioUrl,
+            linkedinUrl: profileData.linkedinUrl
+          } : role === 'employer' && 'name' in profileData ? {
+            name: profileData.name,
+            description: profileData.description,
+            website: profileData.website,
+            logo: profileData.logo,
+            size: profileData.size,
+            founded: profileData.founded,
+            industry: profileData.industry,
+            location: profileData.location,
+            state: profileData.state,
+            contact: profileData.contact,
+            isVerified: profileData.isVerified
+          } : {}),
+          createdAt: profileData.createdAt,
+          updatedAt: profileData.updatedAt
+        } : null,
         tokens: {
           accessToken,
           refreshToken
-        }
+        },
+        registrationComplete: !!profileData,
+        nextStep: role === 'employer' && !profileData ? 'complete-company-profile' : 'dashboard',
+        profileType: role === 'candidate' ? 'candidate' : 'company'
       }
     });
   } catch (error: any) {

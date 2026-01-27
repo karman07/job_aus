@@ -8,8 +8,27 @@ import { AuthRequest } from '../types';
 // Get company profile
 export const getCompanyProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    console.log('🏢 Get company profile request:', {
+      user: req.user ? {
+        id: req.user._id,
+        email: req.user.email,
+        role: req.user.role
+      } : 'No user',
+      headers: req.headers.authorization ? 'Token present' : 'No token'
+    });
+
     const user = req.user;
-    if (!user || user.role !== 'employer') {
+    if (!user) {
+      console.log('❌ No user in request');
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+      return;
+    }
+
+    if (user.role !== 'employer') {
+      console.log('❌ User is not an employer:', user.role);
       res.status(403).json({
         success: false,
         message: 'Access denied. Employers only.'
@@ -17,15 +36,70 @@ export const getCompanyProfile = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const profile = await Company.findOne({ userId: user._id });
+    console.log('🔍 Looking for company profile for user:', user._id);
+    const profile = await Company.findOne({ userId: user._id.toString() });
+    
     if (!profile) {
-      res.status(404).json({
-        success: false,
-        message: 'Company profile not found'
+      console.log('❌ No company profile found for user:', user._id);
+      
+      // Create a new company profile with default values
+      const newCompany = new Company({
+        userId: user._id,
+        name: '',
+        description: '',
+        website: '',
+        logo: '',
+        size: '',
+        founded: null,
+        industry: [],
+        location: '',
+        state: 'NSW',
+        contact: {
+          email: user.email,
+          phone: user.phone || ''
+        },
+        isVerified: false
+      });
+      
+      await newCompany.save();
+      console.log('✅ New company profile created:', newCompany._id);
+      
+      res.json({
+        success: true,
+        data: {
+          user: {
+            id: user._id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+            isEmailVerified: user.isEmailVerified,
+            phone: user.phone
+          },
+          profile: {
+            id: newCompany._id,
+            userId: newCompany.userId,
+            name: newCompany.name,
+            description: newCompany.description,
+            website: newCompany.website,
+            logo: newCompany.logo,
+            size: newCompany.size,
+            founded: newCompany.founded,
+            industry: newCompany.industry,
+            location: newCompany.location,
+            state: newCompany.state,
+            contact: newCompany.contact,
+            isVerified: newCompany.isVerified,
+            createdAt: newCompany.createdAt,
+            updatedAt: newCompany.updatedAt,
+            isNew: true
+          }
+        }
       });
       return;
     }
 
+    console.log('✅ Company profile found:', profile._id);
     res.json({
       success: true,
       data: {
@@ -38,11 +112,28 @@ export const getCompanyProfile = async (req: AuthRequest, res: Response): Promis
           isEmailVerified: user.isEmailVerified,
           phone: user.phone
         },
-        profile
+        profile: {
+          id: profile._id,
+          userId: profile.userId,
+          name: profile.name,
+          description: profile.description,
+          website: profile.website,
+          logo: profile.logo,
+          size: profile.size,
+          founded: profile.founded,
+          industry: profile.industry,
+          location: profile.location,
+          state: profile.state,
+          contact: profile.contact,
+          isVerified: profile.isVerified,
+          createdAt: profile.createdAt,
+          updatedAt: profile.updatedAt,
+          isNew: false
+        }
       }
     });
   } catch (error) {
-    console.error('Get company profile error:', error);
+    console.error('❌ Get company profile error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
