@@ -59,7 +59,7 @@ router.post('/login', async (req, res) => {
           _id: admin._id,
           email: admin.email,
           firstName: admin.firstName,
-          lastName: admin.lastName,
+          lastName: admin.lastName || "",
           role: admin.role
         }
       }
@@ -104,7 +104,7 @@ router.post('/create', async (req, res) => {
           _id: savedAdmin._id,
           email: savedAdmin.email,
           firstName: savedAdmin.firstName,
-          lastName: savedAdmin.lastName,
+          lastName: savedAdmin.lastName || "",
           phone: savedAdmin.phone,
           role: savedAdmin.role,
           createdAt: savedAdmin.createdAt

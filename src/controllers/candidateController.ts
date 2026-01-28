@@ -33,7 +33,7 @@ export const getCandidateProfile = async (req: AuthRequest, res: Response): Prom
           id: user._id,
           email: user.email,
           firstName: user.firstName,
-          lastName: user.lastName,
+          lastName: user.lastName || "",
           role: user.role,
           isEmailVerified: user.isEmailVerified,
           phone: user.phone

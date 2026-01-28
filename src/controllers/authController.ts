@@ -84,7 +84,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
         const candidateProfile = new CandidateProfile({
           userId: user._id,
-          fullName: candidate?.fullName || `${firstName} ${lastName}`,
+          fullName: candidate?.fullName || `${firstName}${lastName ? ` ${lastName}` : ""}`,
           email,
           phone,
           location: candidate?.location || '',
@@ -156,7 +156,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             id: user._id,
             email: user.email,
             firstName: user.firstName,
-            lastName: user.lastName,
+            lastName: user.lastName || "",
             role: user.role,
             isEmailVerified: user.isEmailVerified,
             phone: user.phone,
@@ -292,7 +292,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
           const candidateProfile = new CandidateProfile({
             userId: user._id,
-            fullName: candidate?.fullName || `${firstName} ${lastName}`,
+            fullName: candidate?.fullName || `${firstName}${lastName ? ` ${lastName}` : ""}`,
             email,
             phone,
             location: candidate?.location || '',
@@ -402,7 +402,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           id: user._id,
           email: user.email,
           firstName: user.firstName,
-          lastName: user.lastName,
+          lastName: user.lastName || "",
           role: user.role,
           isEmailVerified: user.isEmailVerified,
           phone: user.phone,
@@ -575,7 +575,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           id: user._id,
           email: user.email,
           firstName: user.firstName,
-          lastName: user.lastName,
+          lastName: user.lastName || "",
           role: user.role,
           isEmailVerified: user.isEmailVerified
         },
@@ -687,7 +687,7 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<void>
           id: user._id,
           email: user.email,
           firstName: user.firstName,
-          lastName: user.lastName,
+          lastName: user.lastName || "",
           role: user.role,
           isEmailVerified: user.isEmailVerified,
           phone: user.phone
