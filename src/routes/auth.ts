@@ -52,8 +52,9 @@ const registerValidation = [
     .withMessage('Company location is required for employers'),
   body('company.state')
     .if(body('role').equals('employer'))
+    .optional()
     .isIn(['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'])
-    .withMessage('Valid Australian state is required for employers'),
+    .withMessage('Valid Australian state required if provided for employers'),
   body('company.industry')
     .if(body('role').equals('employer'))
     .isArray({ min: 1 })

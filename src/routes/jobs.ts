@@ -17,7 +17,7 @@ const router = express.Router();
 const jobValidation = [
   body('title').trim().isLength({ min: 1 }).withMessage('Job title is required'),
   body('location').trim().isLength({ min: 1 }).withMessage('Location is required'),
-  body('state').isIn(['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT']).withMessage('Valid Australian state is required'),
+  body('state').optional().isIn(['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT']).withMessage('Valid Australian state required if provided'),
   body('type').isIn(['Full Time', 'Part Time', 'Contract', 'FIFO 2:1', 'FIFO 8:6']).withMessage('Valid job type is required'),
   body('jobTypeCategory').isIn(['Permanent', 'Contract', 'Apprenticeship', 'Trainee']).withMessage('Valid job type category is required'),
   body('workType').isIn(['On-Site', 'Remote', 'Hybrid']).withMessage('Valid work type is required'),
