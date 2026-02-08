@@ -386,17 +386,40 @@ export const updateJob = async (req: AuthRequest, res: Response): Promise<void> 
   }
 };
 
-export const deleteJob = async (req: Request, res: Response): Promise<void> => {
+export const deleteJob = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const job = await Job.findByIdAndDelete(req.params.id);
+    const jobId = req.params.id;
+    
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(jobId)) {
+      res.status(400).json({ 
+        success: false, 
+        message: 'Invalid job ID format' 
+      });
+      return;
+    }
+
+    const job = await Job.findById(jobId);
 
     if (!job) {
       res.status(404).json({ success: false, message: 'Job not found' });
       return;
     }
 
+    // Authorization: Only job owner or admin can delete
+    if (req.user?.role !== 'admin' && job.postedBy !== req.user?._id?.toString()) {
+      res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only delete your own jobs.' 
+      });
+      return;
+    }
+
+    await Job.findByIdAndDelete(jobId);
+
     res.json({ success: true, message: 'Job deleted successfully' });
   } catch (error) {
+    console.error('❌ Error deleting job:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };

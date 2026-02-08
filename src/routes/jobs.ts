@@ -63,6 +63,8 @@ router.put('/:id', authenticateToken, jobContentUpload.fields([
   { name: 'contentFile', maxCount: 1 }
 ]), updateJob);
 
+router.delete('/:id', authenticateToken, deleteJob);
+
 // Admin routes
 router.get('/admin/all', authenticateToken, requireAdmin, getAllJobs);
 router.put('/admin/:id', authenticateToken, requireAdmin, jobContentUpload.fields([
